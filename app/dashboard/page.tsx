@@ -12,12 +12,27 @@ interface LinkItem {
   criado_em: string
 }
 
+interface ProfileData {
+  id: string
+  user_id: string
+  nome: string
+  bio: string
+  foto_url: string
+  username: string
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [links, setLinks] = useState<LinkItem[]>([])
+  const [nome, setNome] = useState('')
+  const [bio, setBio] = useState('')
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [fetching, setFetching] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -53,6 +68,26 @@ export default function DashboardPage() {
     setLinks(data ?? [])
   }
 
+  const loadProfile = async (ownerId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', ownerId)
+      .maybeSingle()
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    if (data) {
+      setNome(data.nome ?? '')
+      setBio(data.bio ?? '')
+      setFotoUrl(data.foto_url ?? '')
+      setUsername(data.username ?? '')
+    }
+  }
+
   useEffect(() => {
     const initialize = async () => {
       setFetching(true)
@@ -63,12 +98,52 @@ export default function DashboardPage() {
       }
 
       setUserId(data.session.user.id)
-      await loadLinks(data.session.user.id)
+      await Promise.all([loadLinks(data.session.user.id), loadProfile(data.session.user.id)])
       setFetching(false)
     }
 
     initialize()
   }, [router])
+
+  const handleSaveProfile = async () => {
+    if (!userId) return
+    if (!username.trim()) {
+      setErrorMessage('Escolha um username para a sua página.')
+      return
+    }
+
+    setProfileLoading(true)
+    setProfileMessage(null)
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          user_id: userId,
+          nome: nome.trim(),
+          bio: bio.trim(),
+          foto_url: fotoUrl.trim(),
+          username: username.trim(),
+        },
+        { onConflict: 'user_id' }
+      )
+      .select()
+      .maybeSingle()
+    setProfileLoading(false)
+
+    if (error || !data) {
+      setErrorMessage(error?.message ?? 'Erro ao salvar perfil.')
+      return
+    }
+
+    setProfileMessage('Perfil salvo com sucesso.')
+  }
+
+  useEffect(() => {
+    if (profileMessage) {
+      const timeout = window.setTimeout(() => setProfileMessage(null), 4000)
+      return () => window.clearTimeout(timeout)
+    }
+  }, [profileMessage])
 
   const handleAddLink = async () => {
     if (!title.trim() || !url.trim() || !userId) return
@@ -113,6 +188,11 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-black text-white px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
+        {errorMessage ? (
+          <div className="mb-6 rounded-3xl border border-red-700 bg-red-950/80 p-4 text-sm text-red-200">
+            {errorMessage}
+          </div>
+        ) : null}
         <header className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.24em] text-zinc-500">Painel do criador</p>
@@ -145,40 +225,76 @@ export default function DashboardPage() {
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Adicionar novo link</h2>
+                  <h2 className="text-xl font-semibold">Perfil do criador</h2>
                   <p className="mt-1 text-sm text-zinc-400">
-                    Preencha o título e a URL para publicar no seu perfil.
+                    Edite seu nome, bio, foto e username de perfil.
                   </p>
                 </div>
+                <a
+                  href={username ? `/${username}` : '#'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    username ? 'bg-white text-black hover:bg-zinc-200' : 'cursor-not-allowed bg-zinc-800 text-zinc-500'
+                  }`}
+                  aria-disabled={!username}
+                >
+                  Ver minha página
+                </a>
               </div>
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="mt-6 grid gap-4">
                 <label className="block">
-                  <span className="text-sm text-zinc-400">Título</span>
+                  <span className="text-sm text-zinc-400">Nome</span>
                   <input
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
+                    value={nome}
+                    onChange={(event) => setNome(event.target.value)}
                     className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-white/50"
-                    placeholder="Meu Portfólio"
+                    placeholder="Nome do Criador"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm text-zinc-400">URL</span>
+                  <span className="text-sm text-zinc-400">Bio</span>
+                  <textarea
+                    value={bio}
+                    onChange={(event) => setBio(event.target.value)}
+                    className="mt-2 w-full rounded-3xl border border-zinc-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-white/50"
+                    rows={4}
+                    placeholder="Sou criador de conteúdo focado em ..."
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-zinc-400">Foto da foto</span>
                   <input
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
+                    value={fotoUrl}
+                    onChange={(event) => setFotoUrl(event.target.value)}
                     className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-white/50"
-                    placeholder="https://meusite.com"
+                    placeholder="https://..."
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-zinc-400">Username</span>
+                  <input
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-zinc-800 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-white/50"
+                    placeholder="seunome"
                   />
                 </label>
               </div>
 
-              <button
-                onClick={handleAddLink}
-                className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-              >
-                Adicionar link
-              </button>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={profileLoading}
+                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                >
+                  {profileLoading ? 'Salvando...' : 'Salvar perfil'}
+                </button>
+                {profileMessage ? (
+                  <p className="text-sm text-emerald-300">{profileMessage}</p>
+                ) : null}
+              </div>
             </div>
 
             <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6">
