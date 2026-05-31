@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       items: [
         {
           title: 'Linkify Pro',
-          unit_price: 29.0,
+          unit_price: 9.90,
           quantity: 1,
           currency_id: 'BRL',
         },

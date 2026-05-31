@@ -39,10 +39,6 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="pt-32 pb-20 px-6">
         <div className="mx-auto max-w-4xl text-center">
-          <div className="inline-block px-4 py-2 rounded-full text-sm font-medium mb-8 border" style={{ backgroundColor: '#111111', borderColor: '#222222' }}>
-            Usado por criadores brasileiros
-          </div>
-
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight mb-6">
             O link da bio que trabalha por você
           </h1>
