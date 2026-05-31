@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import SubscribeButton from './components/SubscribeButton'
 
 export const metadata = {
   title: 'Linkify — Seu link da bio que vende por você',
@@ -67,7 +68,7 @@ export default function LandingPage() {
               <div className="mt-2 text-3xl font-extrabold">R$15<span className="text-sm font-medium">/mês</span></div>
               <p className="mt-4 text-sm text-zinc-400">Links ilimitados • Loja com Pix • Sem marca d'água • Analytics</p>
               <div className="mt-6">
-                <Link href="/signup" className="inline-block rounded-full px-6 py-3 text-sm font-semibold text-black" style={{backgroundColor: '#22c55e'}}>Assinar Pro</Link>
+                <SubscribeButton />
               </div>
             </div>
 
