@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [usernameError, setUsernameError] = useState<string | null>(null)
+  const [isCopied, setIsCopied] = useState(false)
 
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
@@ -111,8 +112,18 @@ export default function DashboardPage() {
   }
 
   const handleCreateProfile = async () => {
-    if (!userId) return
+    console.log('[handleCreateProfile] Iniciando salvamento de perfil')
+    console.log('[handleCreateProfile] userId:', userId)
+    console.log('[handleCreateProfile] username:', username)
+
+    if (!userId) {
+      console.error('[handleCreateProfile] userId não encontrado')
+      setErrorMessage('Sessão expirada. Faça login novamente.')
+      return
+    }
+
     if (!username.trim()) {
+      console.warn('[handleCreateProfile] Username vazio')
       setErrorMessage('Escolha um username para acessar sua página.')
       return
     }
@@ -121,32 +132,42 @@ export default function DashboardPage() {
     setErrorMessage(null)
     setSuccessMessage(null)
 
+    const profileData = {
+      user_id: userId,
+      nome: nome.trim(),
+      bio: bio.trim(),
+      foto_url: fotoUrl.trim(),
+      username: username.trim(),
+    }
+
+    console.log('[handleCreateProfile] Dados para upsert:', profileData)
+
     const { data, error } = await supabase
       .from('profiles')
-      .upsert(
-        {
-          user_id: userId,
-          nome: nome.trim(),
-          bio: bio.trim(),
-          foto_url: fotoUrl.trim(),
-          username: username.trim(),
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert(profileData, { onConflict: 'user_id' })
       .select()
       .maybeSingle()
+
+    console.log('[handleCreateProfile] Resposta do Supabase - data:', data)
+    console.log('[handleCreateProfile] Resposta do Supabase - error:', error)
 
     setProfileLoading(false)
 
     if (error) {
-      setErrorMessage(error.message)
+      console.error('[handleCreateProfile] Erro ao salvar:', error)
+      setErrorMessage(`Erro ao salvar perfil: ${error.message}`)
       return
     }
 
-    if (data) {
-      setProfile(data)
-      setSuccessMessage('Página criada com sucesso. Agora adicione seus links.')
+    if (!data) {
+      console.warn('[handleCreateProfile] Nenhum dado retornado')
+      setErrorMessage('Erro ao salvar perfil: nenhum dado retornado.')
+      return
     }
+
+    console.log('[handleCreateProfile] Perfil salvo com sucesso:', data)
+    setProfile(data)
+    setSuccessMessage('Perfil salvo com sucesso! Agora compartilhe seu link.')
   }
 
   const handleAddLink = async () => {
@@ -208,16 +229,25 @@ export default function DashboardPage() {
   const shareUrl = `https://meulink-ruby.vercel.app/${username}`
 
   const copyShareLink = async () => {
+    console.log('[copyShareLink] Tentando copiar link:', shareUrl)
+
     if (!username) {
+      console.warn('[copyShareLink] Username vazio')
       setErrorMessage('Defina um username para copiar o link.')
       return
     }
+
     try {
       await navigator.clipboard.writeText(shareUrl)
-      setSuccessMessage('Link copiado para a área de transferência')
-      setTimeout(() => setSuccessMessage(null), 2500)
+      console.log('[copyShareLink] Link copiado com sucesso')
+      setIsCopied(true)
+      setTimeout(() => {
+        console.log('[copyShareLink] Resetando estado copied')
+        setIsCopied(false)
+      }, 2000)
     } catch (e) {
-      setErrorMessage('Não foi possível copiar o link')
+      console.error('[copyShareLink] Erro ao copiar:', e)
+      setErrorMessage('Não foi possível copiar o link. Tente novamente.')
     }
   }
 
@@ -523,10 +553,16 @@ export default function DashboardPage() {
             <div className="flex-shrink-0">
               <button
                 onClick={copyShareLink}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${username ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  isCopied
+                    ? 'bg-emerald-600 text-white'
+                    : username
+                    ? 'bg-white text-black hover:bg-zinc-200'
+                    : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                }`}
                 disabled={!username}
               >
-                Copiar
+                {isCopied ? '✓ Copiado!' : 'Copiar'}
               </button>
             </div>
           </div>
