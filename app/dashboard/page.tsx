@@ -196,11 +196,13 @@ export default function DashboardPage() {
     setErrorMessage(null)
     setSuccessMessage(null)
 
+    const safeFotoUrl = fotoUrl.startsWith('blob:') ? '' : fotoUrl.trim()
+
     const profileData = {
       user_id: userId,
       nome: nome.trim(),
       bio: bio.trim(),
-      foto_url: fotoUrl.trim(),
+      foto_url: safeFotoUrl,
       username: username.trim(),
     }
 

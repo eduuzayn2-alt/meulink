@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -13,6 +14,8 @@ export default async function Page({ params }: { params: { username: string } })
     .select('*')
     .eq('username', username.toLowerCase())
     .single()
+
+  console.log('profile.foto_url:', profile?.foto_url)
 
   if (!profile) {
     return (
@@ -30,6 +33,18 @@ export default async function Page({ params }: { params: { username: string } })
   return (
     <main style={{minHeight:'100vh',background:'#000',color:'#fff',display:'flex',flexDirection:'column',alignItems:'center',padding:'4rem 1rem'}}>
       <div style={{width:'100%',maxWidth:'28rem'}}>
+        {profile.foto_url ? (
+          <div style={{display:'flex',justifyContent:'center',marginBottom:'1.5rem'}}>
+            <Image
+              src={profile.foto_url}
+              alt={profile.nome ?? 'Foto de perfil'}
+              width={120}
+              height={120}
+              className="rounded-full"
+              unoptimized={true}
+            />
+          </div>
+        ) : null}
         <h1 style={{fontSize:'1.5rem',fontWeight:'bold',textAlign:'center',marginBottom:'0.25rem'}}>{profile.nome}</h1>
         <p style={{color:'#888',textAlign:'center',marginBottom:'2rem'}}>{profile.bio}</p>
         <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
