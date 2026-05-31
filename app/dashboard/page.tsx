@@ -185,6 +185,22 @@ export default function DashboardPage() {
     setDragIndex(null)
   }
 
+  const shareUrl = `https://meulink-ruby.vercel.app/${username}`
+
+  const copyShareLink = async () => {
+    if (!username) {
+      setErrorMessage('Defina um username para copiar o link.')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setSuccessMessage('Link copiado para a área de transferência')
+      setTimeout(() => setSuccessMessage(null), 2500)
+    } catch (e) {
+      setErrorMessage('Não foi possível copiar o link')
+    }
+  }
+
   if (fetching) {
     return (
       <main className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
@@ -327,7 +343,7 @@ export default function DashboardPage() {
                     <h2 className="mt-3 text-2xl font-semibold">Ajuste sua presença</h2>
                   </div>
                   <a
-                    href={`/${username}`}
+                    href={`https://meulink-ruby.vercel.app/${username}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
@@ -468,6 +484,24 @@ export default function DashboardPage() {
             >
               {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
             </button>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <div className="flex-1 overflow-hidden rounded-full border border-zinc-800 bg-[#0b0b0b] px-4 py-3">
+              <p className="text-xs text-zinc-400">Seu link público</p>
+              <div className="mt-1 flex items-center gap-3">
+                <span className="truncate font-medium text-white">{username ? `meulink-ruby.vercel.app/${username}` : 'meulink-ruby.vercel.app/seunome'}</span>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                onClick={copyShareLink}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${username ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}
+                disabled={!username}
+              >
+                Copiar
+              </button>
+            </div>
           </div>
 
           <div className={`mt-8 rounded-[2rem] border border-zinc-800 p-6 ${
