@@ -39,9 +39,29 @@ export default function DashboardPage() {
   const [url, setUrl] = useState('')
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [usernameError, setUsernameError] = useState<string | null>(null)
 
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
+
+  const validateAndTransformUsername = (input: string) => {
+    setUsernameError(null)
+    if (!input) {
+      setUsername('')
+      return
+    }
+    const lowerInput = input.toLowerCase()
+    const transformed = lowerInput.replace(/ +/g, '-')
+    const validChars = /^[a-z0-9-]*$/.test(transformed)
+
+    if (!validChars) {
+      const invalid = transformed.replace(/[a-z0-9-]/g, '')
+      setUsernameError(`Caracteres não permitidos: ${[...new Set(invalid)].join(', ')}`)
+      return
+    }
+
+    setUsername(transformed)
+  }
 
   useEffect(() => {
     const initialize = async () => {
@@ -272,11 +292,15 @@ export default function DashboardPage() {
                       Username
                       <input
                         value={username}
-                        onChange={(event) => setUsername(event.target.value)}
+                        onChange={(event) => validateAndTransformUsername(event.target.value)}
                         placeholder="seunome"
                         className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
                       />
-                      <span className="mt-2 block text-xs text-zinc-500">linkify.app/{username || 'seunome'}</span>
+                      {usernameError ? (
+                        <span className="mt-2 block text-xs text-red-400">{usernameError}</span>
+                      ) : (
+                        <span className="mt-2 block text-xs text-zinc-500">meulink-ruby.vercel.app/{username || 'seunome'}</span>
+                      )}
                     </label>
                     <label className="block text-sm text-zinc-300">
                       Nome completo
@@ -366,9 +390,12 @@ export default function DashboardPage() {
                       Username
                       <input
                         value={username}
-                        onChange={(event) => setUsername(event.target.value)}
+                        onChange={(event) => validateAndTransformUsername(event.target.value)}
                         className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
                       />
+                      {usernameError ? (
+                        <span className="mt-2 block text-xs text-red-400">{usernameError}</span>
+                      ) : null}
                     </label>
                   </div>
                   <label className="block text-sm text-zinc-300">
