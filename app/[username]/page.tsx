@@ -19,9 +19,9 @@ export default async function UserPage({ params }: UserPageProps) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, user_id, nome, bio, foto_url, username')
+    .select('*')
     .eq('username', username.toLowerCase())
-    .maybeSingle()
+    .single()
 
   if (!profile) {
     return (
@@ -34,12 +34,10 @@ export default async function UserPage({ params }: UserPageProps) {
     )
   }
 
-  // Busca links do usuário
-  const { data: links, error: linksError } = await supabase
+  const { data: links } = await supabase
     .from('links')
-    .select('id, titulo, url')
+    .select('*')
     .eq('user_id', profile.user_id)
-    .order('criado_em', { ascending: false })
 
   const linkItems = links ?? []
 
