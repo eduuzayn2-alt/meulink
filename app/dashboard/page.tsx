@@ -122,27 +122,30 @@ export default function DashboardPage() {
 
   const handleFileChange = async (file: File | null) => {
     if (!file) return
-    if (!userId) {
-      setErrorMessage('Sessão expirada. Faça login novamente antes de enviar uma foto.')
-      return
-    }
 
     setProfileLoading(true)
     setErrorMessage(null)
     setSuccessMessage(null)
 
     try {
-      const safeName = file.name.replace(/\s+/g, '_')
-      const filePath = `avatars/${userId}/${Date.now()}_${safeName}`
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      const currentUserId = userData?.user?.id
 
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-      })
+      if (userError || !currentUserId) {
+        setProfileLoading(false)
+        setErrorMessage('Sessão expirada. Faça login novamente antes de enviar uma foto.')
+        return
+      }
+
+      const filePath = `${currentUserId}-${Date.now()}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
 
       if (uploadError) {
-        setErrorMessage('Erro ao enviar a imagem. Verifique sua conexão e tente novamente.')
         setProfileLoading(false)
+        setErrorMessage('Erro ao enviar a imagem. Verifique sua conexão e tente novamente.')
         return
       }
 
@@ -150,15 +153,15 @@ export default function DashboardPage() {
       const publicUrl = (publicData as any)?.publicUrl ?? ''
 
       if (!publicUrl) {
-        setErrorMessage('Erro ao obter URL pública da imagem.')
         setProfileLoading(false)
+        setErrorMessage('Erro ao obter URL pública da imagem.')
         return
       }
 
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
         .update({ foto_url: publicUrl })
-        .eq('user_id', userId)
+        .eq('user_id', currentUserId)
         .select()
         .maybeSingle()
 
