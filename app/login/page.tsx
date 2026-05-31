@@ -21,7 +21,7 @@ export default function LoginPage() {
       return
     }
     setMessage('Login realizado com sucesso! Redirecionando...')
-    router.push('/')
+    router.push('/dashboard')
   }
 
   const handleSignUp = async () => {
@@ -33,7 +33,8 @@ export default function LoginPage() {
       setMessage(error.message)
       return
     }
-    setMessage('Conta criada! Verifique seu e-mail para confirmação, se necessário.')
+    setMessage('Conta criada! Redirecionando...')
+    router.push('/dashboard')
   }
 
   return (

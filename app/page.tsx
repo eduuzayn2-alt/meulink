@@ -1,12 +1,49 @@
+"use client"
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '../lib/supabase'
+
 export default function Home() {
+  const router = useRouter()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (data.session?.user) {
+        setIsLoggedIn(true)
+      }
+      setLoading(false)
+    }
+
+    checkSession()
+  }, [])
+
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Header */}
       <nav className="flex justify-between items-center px-8 py-6 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold">Linkify 🔗</h1>
         <div className="flex gap-4">
-          <a href="/login" className="text-zinc-400 hover:text-white transition">Entrar</a>
-          <a href="/cadastro" className="bg-white text-black px-4 py-2 rounded-full font-medium hover:bg-zinc-200 transition">Criar grátis</a>
+          {!loading && isLoggedIn ? (
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-white text-black px-4 py-2 rounded-full font-medium hover:bg-zinc-200 transition"
+            >
+              Meu painel
+            </button>
+          ) : (
+            <>
+              <a href="/login" className="text-zinc-400 hover:text-white transition">
+                Entrar
+              </a>
+              <a href="/login" className="bg-white text-black px-4 py-2 rounded-full font-medium hover:bg-zinc-200 transition">
+                Criar grátis
+              </a>
+            </>
+          )}
         </div>
       </nav>
 
@@ -20,7 +57,7 @@ export default function Home() {
           Links, loja com Pix, e tudo mais — em uma página só. 
           Feito para criadores brasileiros.
         </p>
-        <a href="/cadastro" className="bg-white text-black px-8 py-4 rounded-full text-lg font-bold hover:bg-zinc-200 transition">
+        <a href="/login" className="bg-white text-black px-8 py-4 rounded-full text-lg font-bold hover:bg-zinc-200 transition">
           Criar minha página grátis →
         </a>
       </section>
