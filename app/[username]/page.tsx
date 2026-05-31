@@ -21,7 +21,7 @@ export default async function UserPage({ params }: UserPageProps) {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, user_id, nome, bio, foto_url, username')
-    .eq('username', username)
+    .ilike('username', username)
     .maybeSingle()
 
   if (profileError || !profile) {
