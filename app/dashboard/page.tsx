@@ -45,6 +45,16 @@ export default function DashboardPage() {
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
 
+  const getFriendlyErrorMessage = (error: { message?: string } | null | undefined, fallback: string) => {
+    const message = error?.message?.trim()
+    if (!message) return fallback
+    const lower = message.toLowerCase()
+    if (lower.includes('network') || lower.includes('timeout') || lower.includes('fetch') || lower.includes('connection')) {
+      return fallback
+    }
+    return message
+  }
+
   const validateAndTransformUsername = (input: string) => {
     setUsernameError(null)
     if (!input) {
@@ -81,7 +91,15 @@ export default function DashboardPage() {
         supabase.from('links').select('*').eq('user_id', ownerId).order('criado_em', { ascending: false }),
       ])
 
-      if (profileError) setErrorMessage(profileError.message)
+      if (profileError || linkError) {
+        setErrorMessage(
+          getFriendlyErrorMessage(
+            profileError ?? linkError,
+            'Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.'
+          )
+        )
+      }
+
       if (profileData) {
         setProfile(profileData)
         setNome(profileData.nome ?? '')
@@ -112,18 +130,12 @@ export default function DashboardPage() {
   }
 
   const handleCreateProfile = async () => {
-    console.log('[handleCreateProfile] Iniciando salvamento de perfil')
-    console.log('[handleCreateProfile] userId:', userId)
-    console.log('[handleCreateProfile] username:', username)
-
     if (!userId) {
-      console.error('[handleCreateProfile] userId não encontrado')
       setErrorMessage('Sessão expirada. Faça login novamente.')
       return
     }
 
     if (!username.trim()) {
-      console.warn('[handleCreateProfile] Username vazio')
       setErrorMessage('Escolha um username para acessar sua página.')
       return
     }
@@ -140,32 +152,26 @@ export default function DashboardPage() {
       username: username.trim(),
     }
 
-    console.log('[handleCreateProfile] Dados para upsert:', profileData)
-
     const { data, error } = await supabase
       .from('profiles')
       .upsert(profileData, { onConflict: 'user_id' })
       .select()
       .maybeSingle()
 
-    console.log('[handleCreateProfile] Resposta do Supabase - data:', data)
-    console.log('[handleCreateProfile] Resposta do Supabase - error:', error)
-
     setProfileLoading(false)
 
     if (error) {
-      console.error('[handleCreateProfile] Erro ao salvar:', error)
-      setErrorMessage(`Erro ao salvar perfil: ${error.message}`)
+      setErrorMessage(
+        getFriendlyErrorMessage(error, 'Erro ao salvar perfil. Verifique sua conexão e tente novamente.')
+      )
       return
     }
 
     if (!data) {
-      console.warn('[handleCreateProfile] Nenhum dado retornado')
-      setErrorMessage('Erro ao salvar perfil: nenhum dado retornado.')
+      setErrorMessage('Erro ao salvar perfil. Nenhuma resposta do servidor. Tente novamente.')
       return
     }
 
-    console.log('[handleCreateProfile] Perfil salvo com sucesso:', data)
     setProfile(data)
     setSuccessMessage('Perfil salvo com sucesso! Agora compartilhe seu link.')
   }
@@ -185,7 +191,9 @@ export default function DashboardPage() {
     setLoading(false)
 
     if (error || !data) {
-      setErrorMessage(error?.message ?? 'Erro ao adicionar link.')
+      setErrorMessage(
+        getFriendlyErrorMessage(error, 'Erro ao adicionar link. Verifique sua conexão e tente novamente.')
+      )
       return
     }
 
@@ -205,7 +213,9 @@ export default function DashboardPage() {
     setLoading(false)
 
     if (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(
+        getFriendlyErrorMessage(error, 'Erro ao remover link. Verifique sua conexão e tente novamente.')
+      )
       return
     }
 
@@ -229,24 +239,18 @@ export default function DashboardPage() {
   const shareUrl = `https://meulink-ruby.vercel.app/${username}`
 
   const copyShareLink = async () => {
-    console.log('[copyShareLink] Tentando copiar link:', shareUrl)
-
     if (!username) {
-      console.warn('[copyShareLink] Username vazio')
       setErrorMessage('Defina um username para copiar o link.')
       return
     }
 
     try {
       await navigator.clipboard.writeText(shareUrl)
-      console.log('[copyShareLink] Link copiado com sucesso')
       setIsCopied(true)
       setTimeout(() => {
-        console.log('[copyShareLink] Resetando estado copied')
         setIsCopied(false)
       }, 2000)
     } catch (e) {
-      console.error('[copyShareLink] Erro ao copiar:', e)
       setErrorMessage('Não foi possível copiar o link. Tente novamente.')
     }
   }

@@ -16,19 +16,14 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', proces
 
 export default async function UserPage({ params }: UserPageProps) {
   const username = params.username
-  console.log('[UserPage] params.username recebido:', username)
 
-  // Busca perfil pelo username
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('id, user_id, nome, bio, foto_url, username')
     .eq('username', username.toLowerCase())
     .maybeSingle()
 
-  console.log('[UserPage] Resultado da query Supabase:', { profile, error: profileError })
-
-  if (profileError || !profile) {
-    console.warn('[UserPage] Perfil não encontrado', { profileError, profile })
+  if (!profile) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center">
