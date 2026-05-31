@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [fotoUrl, setFotoUrl] = useState('')
   const [username, setUsername] = useState('')
   const [links, setLinks] = useState<LinkItem[]>([])
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -112,6 +113,26 @@ export default function DashboardPage() {
         setErrorMessage(linkError.message)
       } else {
         setLinks(linkData ?? [])
+      }
+
+      // fetch subscriptions via server endpoint using session token
+      try {
+        const token = data.session.access_token
+        if (token) {
+          const subsRes = await fetch('/api/subscriptions', {
+            headers: {
+              'x-access-token': token,
+              'x-user-id': ownerId,
+            },
+          })
+
+          if (subsRes.ok) {
+            const subs = await subsRes.json()
+            setSubscriptions(subs ?? [])
+          }
+        }
+      } catch (e) {
+        // ignore subscription loading errors
       }
 
       setFetching(false)
@@ -645,6 +666,24 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-8 space-y-4">
+                <div className="rounded-[1.5rem] border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
+                  <div className="font-semibold text-white">Assinaturas</div>
+                  {subscriptions.length === 0 ? (
+                    <div className="mt-2 text-zinc-500">Nenhuma assinatura encontrada.</div>
+                  ) : (
+                    <ul className="mt-2 space-y-2 text-zinc-300">
+                      {subscriptions.map((s) => (
+                        <li key={s.id} className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">{s.status}</div>
+                            <div className="text-xs text-zinc-500">{s.currency} {s.amount}</div>
+                          </div>
+                          <div className="text-xs text-zinc-500">{new Date(s.created_at).toLocaleString()}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               {previewLinks.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-dashed border-zinc-700 bg-zinc-900/70 p-6 text-center text-zinc-500">
                   Seus links aparecerão aqui depois de adicionados.

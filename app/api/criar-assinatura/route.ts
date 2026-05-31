@@ -13,20 +13,27 @@ export async function POST(request: Request) {
 
     const backUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/pagamento/sucesso`
 
-    const payload = {
-      reason: 'Assinatura Linkify Pro',
-      auto_recurring: {
-        frequency: 1,
-        frequency_type: 'months',
-        transaction_amount: 29.0,
-        currency_id: 'BRL',
+    const payload: any = {
+      items: [
+        {
+          title: 'Linkify Pro',
+          unit_price: 29.0,
+          quantity: 1,
+          currency_id: 'BRL',
+        },
+      ],
+      back_urls: {
+        success: backUrl,
       },
-      payer_email: body.payer_email ?? undefined,
-      back_url: backUrl,
+      auto_return: 'approved',
       external_reference: body.external_reference ?? undefined,
     }
 
-    const res = await fetch('https://api.mercadopago.com/preapproval', {
+    if (body.payer_email) {
+      payload.payer = { email: body.payer_email }
+    }
+
+    const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${mercadopagoToken}`,
