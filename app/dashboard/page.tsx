@@ -10,6 +10,8 @@ interface LinkItem {
   titulo: string
   url: string
   criado_em: string
+  icon_name?: string
+  icon_url?: string
 }
 
 interface ProfileData {
@@ -18,8 +20,19 @@ interface ProfileData {
   nome: string
   bio: string
   foto_url: string
+  cover_url?: string
   username: string
 }
+
+const defaultIconOptions = [
+  { value: '', label: 'Nenhum' },
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'YouTube', label: 'YouTube' },
+  { value: 'WhatsApp', label: 'WhatsApp' },
+  { value: 'TikTok', label: 'TikTok' },
+  { value: 'Site', label: 'Site' },
+  { value: 'Outro', label: 'Outro' },
+]
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -33,11 +46,15 @@ export default function DashboardPage() {
   const [nome, setNome] = useState('')
   const [bio, setBio] = useState('')
   const [fotoUrl, setFotoUrl] = useState('')
+  const [coverUrl, setCoverUrl] = useState('')
   const [username, setUsername] = useState('')
   const [links, setLinks] = useState<LinkItem[]>([])
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
+  const [linkIconName, setLinkIconName] = useState('')
+  const [linkIconUrl, setLinkIconUrl] = useState('')
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [usernameError, setUsernameError] = useState<string | null>(null)
@@ -75,6 +92,34 @@ export default function DashboardPage() {
     setUsername(transformed)
   }
 
+  const renderLinkIcon = (link: LinkItem) => {
+    if (link.icon_url) {
+      return (
+        <img src={link.icon_url} alt={link.icon_name || 'Ícone'} className="h-10 w-10 rounded-full object-cover" />
+      )
+    }
+
+    const label = link.icon_name || 'Link'
+    const baseStyle = 'flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-xs font-semibold uppercase'
+
+    switch (link.icon_name) {
+      case 'Instagram':
+        return <div className={`${baseStyle} text-pink-400`}>IG</div>
+      case 'YouTube':
+        return <div className={`${baseStyle} text-red-500`}>YT</div>
+      case 'WhatsApp':
+        return <div className={`${baseStyle} text-emerald-400`}>WA</div>
+      case 'TikTok':
+        return <div className={`${baseStyle} text-white`}>TT</div>
+      case 'Site':
+        return <div className={`${baseStyle} text-sky-400`}>WWW</div>
+      case 'Outro':
+        return <div className={`${baseStyle} text-zinc-300`}>OUT</div>
+      default:
+        return <div className={baseStyle}>{label.slice(0, 2)}</div>
+    }
+  }
+
   useEffect(() => {
     const initialize = async () => {
       setFetching(true)
@@ -106,6 +151,7 @@ export default function DashboardPage() {
         setNome(profileData.nome ?? '')
         setBio(profileData.bio ?? '')
         setFotoUrl(profileData.foto_url ?? '')
+        setCoverUrl(profileData.cover_url ?? '')
         setUsername(profileData.username ?? '')
       }
 
@@ -202,6 +248,67 @@ export default function DashboardPage() {
     }
   }
 
+  const handleCoverChange = async (file: File | null) => {
+    if (!file) return
+
+    setProfileLoading(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      const currentUserId = userData?.user?.id
+
+      if (userError || !currentUserId) {
+        setProfileLoading(false)
+        setErrorMessage('Sessão expirada. Faça login novamente antes de enviar a imagem de capa.')
+        return
+      }
+
+      const filePath = `cover-${currentUserId}-${Date.now()}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        setProfileLoading(false)
+        setErrorMessage('Erro ao enviar a imagem. Verifique sua conexão e tente novamente.')
+        return
+      }
+
+      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      const publicUrl = (publicData as any)?.publicUrl ?? ''
+
+      if (!publicUrl) {
+        setProfileLoading(false)
+        setErrorMessage('Erro ao obter URL pública da imagem.')
+        return
+      }
+
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ cover_url: publicUrl })
+        .eq('user_id', currentUserId)
+        .select()
+        .maybeSingle()
+
+      setProfileLoading(false)
+
+      if (updateError) {
+        setErrorMessage('Erro ao salvar imagem de capa. Tente novamente.')
+        return
+      }
+
+      setCoverUrl(publicUrl)
+      if (updatedProfile) setProfile(updatedProfile)
+      setSuccessMessage('Imagem de capa enviada com sucesso.')
+    } catch (e) {
+      setProfileLoading(false)
+      setErrorMessage('Erro ao processar a imagem. Tente novamente.')
+    }
+  }
+
   const handleCreateProfile = async () => {
     if (!userId) {
       setErrorMessage('Sessão expirada. Faça login novamente.')
@@ -218,12 +325,14 @@ export default function DashboardPage() {
     setSuccessMessage(null)
 
     const safeFotoUrl = fotoUrl.startsWith('blob:') ? '' : fotoUrl.trim()
+    const safeCoverUrl = coverUrl.startsWith('blob:') ? '' : coverUrl.trim()
 
     const profileData = {
       user_id: userId,
       nome: nome.trim(),
       bio: bio.trim(),
       foto_url: safeFotoUrl,
+      cover_url: safeCoverUrl,
       username: username.trim(),
     }
 
@@ -251,15 +360,74 @@ export default function DashboardPage() {
     setSuccessMessage('Perfil salvo com sucesso! Agora compartilhe seu link.')
   }
 
+  const handleEditLink = (link: LinkItem) => {
+    setTitle(link.titulo)
+    setUrl(link.url)
+    setLinkIconName(link.icon_name ?? '')
+    setLinkIconUrl(link.icon_url ?? '')
+    setEditingLinkId(link.id)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingLinkId(null)
+    setTitle('')
+    setUrl('')
+    setLinkIconName('')
+    setLinkIconUrl('')
+    setErrorMessage(null)
+    setSuccessMessage(null)
+  }
+
   const handleAddLink = async () => {
     if (!title.trim() || !url.trim() || !userId) return
     setLoading(true)
     setErrorMessage(null)
     setSuccessMessage(null)
 
+    if (editingLinkId) {
+      const { data, error } = await supabase
+        .from('links')
+        .update({
+          titulo: title.trim(),
+          url: url.trim(),
+          icon_name: linkIconName || null,
+          icon_url: linkIconUrl.trim() || null,
+        })
+        .eq('id', editingLinkId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      setLoading(false)
+
+      if (error || !data) {
+        setErrorMessage(
+          getFriendlyErrorMessage(error, 'Erro ao atualizar link. Verifique sua conexão e tente novamente.')
+        )
+        return
+      }
+
+      setLinks((current) => current.map((link) => (link.id === data.id ? data : link)))
+      setEditingLinkId(null)
+      setTitle('')
+      setUrl('')
+      setLinkIconName('')
+      setLinkIconUrl('')
+      setSuccessMessage('Link atualizado com sucesso.')
+      return
+    }
+
     const { data, error } = await supabase
       .from('links')
-      .insert({ user_id: userId, titulo: title.trim(), url: url.trim() })
+      .insert({
+        user_id: userId,
+        titulo: title.trim(),
+        url: url.trim(),
+        icon_name: linkIconName || null,
+        icon_url: linkIconUrl.trim() || null,
+      })
       .select()
       .single()
 
@@ -275,6 +443,8 @@ export default function DashboardPage() {
     setLinks((current) => [data, ...current])
     setTitle('')
     setUrl('')
+    setLinkIconName('')
+    setLinkIconUrl('')
     setSuccessMessage('Link adicionado com sucesso.')
   }
 
@@ -431,6 +601,15 @@ export default function DashboardPage() {
                       />
                     </label>
                     <label className="block text-sm text-zinc-300">
+                      Imagem de capa
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => handleCoverChange(event.target.files?.[0] ?? null)}
+                        className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
+                      />
+                    </label>
+                    <label className="block text-sm text-zinc-300">
                       Foto de perfil
                       <input
                         type="file"
@@ -517,6 +696,15 @@ export default function DashboardPage() {
                     />
                   </label>
                   <label className="block text-sm text-zinc-300">
+                    Imagem de capa
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => handleCoverChange(event.target.files?.[0] ?? null)}
+                      className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
+                    />
+                  </label>
+                  <label className="block text-sm text-zinc-300">
                     Foto de perfil
                     <input
                       type="file"
@@ -536,18 +724,28 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Editor de links</p>
                     <h2 className="mt-3 text-2xl font-semibold">Organize seus links</h2>
                   </div>
-                  <button
-                    onClick={handleAddLink}
-                    disabled={loading}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                  >
-                    + Adicionar
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    {editingLinkId ? (
+                      <button
+                        onClick={handleCancelEdit}
+                        className="inline-flex items-center justify-center rounded-full border border-zinc-700 bg-transparent px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30"
+                      >
+                        Cancelar edição
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={handleAddLink}
+                      disabled={loading}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                    >
+                      {editingLinkId ? 'Salvar alterações' : '+ Adicionar'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
@@ -564,6 +762,31 @@ export default function DashboardPage() {
                     <input
                       value={url}
                       onChange={(event) => setUrl(event.target.value)}
+                      className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+                  <label className="block text-sm text-zinc-300">
+                    Ícone padrão
+                    <select
+                      value={linkIconName}
+                      onChange={(event) => setLinkIconName(event.target.value)}
+                      className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
+                    >
+                      {defaultIconOptions.map((option) => (
+                        <option key={option.value} value={option.value} className="bg-[#0a0a0a] text-white">
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm text-zinc-300">
+                    URL do ícone/foto
+                    <input
+                      value={linkIconUrl}
+                      onChange={(event) => setLinkIconUrl(event.target.value)}
+                      placeholder="https://..."
                       className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-white/30"
                     />
                   </label>
@@ -586,19 +809,27 @@ export default function DashboardPage() {
                       >
                         <div className="flex min-w-0 items-center gap-4">
                           <div className="flex h-12 w-12 items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900 text-xl text-zinc-400">
-                            ≡
+                            {renderLinkIcon(link)}
                           </div>
                           <div className="min-w-0">
                             <p className="truncate font-semibold text-white">{link.titulo}</p>
                             <p className="truncate text-sm text-zinc-500">{link.url}</p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleDelete(link.id)}
-                          className="rounded-full border border-red-600 bg-red-600/10 px-4 py-2 text-sm text-red-200 transition hover:bg-red-600/20"
-                        >
-                          Excluir
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditLink(link)}
+                            className="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(link.id)}
+                            className="rounded-full border border-red-600 bg-red-600/10 px-4 py-2 text-sm text-red-200 transition hover:bg-red-600/20"
+                          >
+                            Excluir
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -649,6 +880,14 @@ export default function DashboardPage() {
           <div className={`mt-8 rounded-[2rem] border border-zinc-800 p-6 ${
             theme === 'dark' ? 'bg-[#050505] text-white' : 'bg-white text-slate-950'
           }`}>
+            {coverUrl ? (
+              <div className="mb-6 h-32 overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-zinc-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverUrl} alt="Imagem de capa" className="h-full w-full object-cover" />
+              </div>
+            ) : (
+              <div className="mb-6 h-32 rounded-[1.5rem] border border-dashed border-zinc-700 bg-[#0b0b0b]" />
+            )}
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-full border border-zinc-800 bg-zinc-900 overflow-hidden">
                 {fotoUrl ? (

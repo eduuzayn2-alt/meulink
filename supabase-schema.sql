@@ -5,10 +5,16 @@ create table if not exists public.links (
   user_id uuid not null,
   titulo text not null,
   url text not null,
+  icon_name text,
+  icon_url text,
   criado_em timestamptz not null default now()
 );
 
 alter table public.links enable row level security;
+
+alter table public.links
+  add column if not exists icon_name text,
+  add column if not exists icon_url text;
 
 create policy "Authenticated users can manage their own links" on public.links
   for all
@@ -34,7 +40,8 @@ create policy "Authenticated users can manage their own profile" on public.profi
 -- Add columns to track subscription plan and status
 alter table public.profiles
   add column if not exists plan text default 'free',
-  add column if not exists subscription_status text default 'inactive';
+  add column if not exists subscription_status text default 'inactive',
+  add column if not exists cover_url text;
 
 -- Subscriptions table to track Mercado Pago subscriptions/payments
 create table if not exists public.subscriptions (
