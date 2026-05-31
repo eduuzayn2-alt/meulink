@@ -89,7 +89,6 @@ export default async function Page({ params }: { params: { username: string } })
               <div style={{flexShrink:0}}>{renderLinkIcon(link)}</div>
               <div>
                 <div style={{fontWeight:600}}>{link.titulo}</div>
-                <div style={{color:'#888',fontSize:'0.9rem',marginTop:'0.25rem'}}>{link.url}</div>
               </div>
             </a>
           ))}
