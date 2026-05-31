@@ -120,13 +120,62 @@ export default function DashboardPage() {
     initialize()
   }, [router])
 
-  const handleFileChange = (file: File | null) => {
+  const handleFileChange = async (file: File | null) => {
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (reader.result) setFotoUrl(reader.result as string)
+    if (!userId) {
+      setErrorMessage('Sessão expirada. Faça login novamente antes de enviar uma foto.')
+      return
     }
-    reader.readAsDataURL(file)
+
+    setProfileLoading(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    try {
+      const safeName = file.name.replace(/\s+/g, '_')
+      const filePath = `avatars/${userId}/${Date.now()}_${safeName}`
+
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+
+      if (uploadError) {
+        setErrorMessage('Erro ao enviar a imagem. Verifique sua conexão e tente novamente.')
+        setProfileLoading(false)
+        return
+      }
+
+      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      const publicUrl = (publicData as any)?.publicUrl ?? ''
+
+      if (!publicUrl) {
+        setErrorMessage('Erro ao obter URL pública da imagem.')
+        setProfileLoading(false)
+        return
+      }
+
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ foto_url: publicUrl })
+        .eq('user_id', userId)
+        .select()
+        .maybeSingle()
+
+      setProfileLoading(false)
+
+      if (updateError) {
+        setErrorMessage('Erro ao salvar informação de perfil. Tente novamente.')
+        return
+      }
+
+      setFotoUrl(publicUrl)
+      if (updatedProfile) setProfile(updatedProfile)
+      setSuccessMessage('Foto enviada com sucesso.')
+    } catch (e) {
+      setProfileLoading(false)
+      setErrorMessage('Erro ao processar a imagem. Tente novamente.')
+    }
   }
 
   const handleCreateProfile = async () => {
