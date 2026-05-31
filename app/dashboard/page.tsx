@@ -1,38 +1,112 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
 
 interface LinkItem {
   id: string
-  title: string
+  user_id: string
+  titulo: string
   url: string
+  criado_em: string
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [links, setLinks] = useState<LinkItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const previewLinks = useMemo(
     () => links.slice().reverse(),
     [links]
   )
 
-  const handleAddLink = () => {
-    if (!title.trim() || !url.trim()) return
+  if (fetching) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-8">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950 px-8 py-6 text-center">
+          <p className="text-sm uppercase tracking-[0.24em] text-zinc-500">Verificando sessão</p>
+          <p className="mt-4 text-lg font-semibold">Aguarde um momento...</p>
+        </div>
+      </main>
+    )
+  }
 
-    const newLink: LinkItem = {
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      url: url.trim(),
+  const loadLinks = async (ownerId: string) => {
+    const { data, error } = await supabase
+      .from('links')
+      .select('*')
+      .eq('user_id', ownerId)
+      .order('criado_em', { ascending: false })
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
     }
 
-    setLinks((current) => [newLink, ...current])
+    setLinks(data ?? [])
+  }
+
+  useEffect(() => {
+    const initialize = async () => {
+      setFetching(true)
+      const { data, error } = await supabase.auth.getSession()
+      if (error || !data.session?.user) {
+        router.push('/login')
+        return
+      }
+
+      setUserId(data.session.user.id)
+      await loadLinks(data.session.user.id)
+      setFetching(false)
+    }
+
+    initialize()
+  }, [router])
+
+  const handleAddLink = async () => {
+    if (!title.trim() || !url.trim() || !userId) return
+
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('links')
+      .insert({ user_id: userId, titulo: title.trim(), url: url.trim() })
+      .select()
+      .single()
+    setLoading(false)
+
+    if (error || !data) {
+      setErrorMessage(error?.message ?? 'Erro ao adicionar link.')
+      return
+    }
+
+    setLinks((current) => [data, ...current])
     setTitle('')
     setUrl('')
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!userId) return
+
+    setLoading(true)
+    const { error } = await supabase
+      .from('links')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+    setLoading(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
     setLinks((current) => current.filter((link) => link.id !== id))
   }
 
@@ -127,7 +201,7 @@ export default function DashboardPage() {
                   {links.map((link) => (
                     <div key={link.id} className="flex flex-col gap-3 rounded-3xl border border-zinc-800 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-semibold text-white">{link.title}</p>
+                        <p className="font-semibold text-white">{link.titulo}</p>
                         <a href={link.url} target="_blank" rel="noreferrer" className="text-sm text-zinc-400 hover:text-white break-all">
                           {link.url}
                         </a>
@@ -175,7 +249,7 @@ export default function DashboardPage() {
                       rel="noreferrer"
                       className="block rounded-3xl border border-zinc-800 bg-zinc-950 px-5 py-4 transition hover:border-white/20 hover:bg-zinc-800"
                     >
-                      <p className="font-semibold text-white">{link.title}</p>
+                      <p className="font-semibold text-white">{link.titulo}</p>
                       <p className="mt-1 text-sm text-zinc-400 truncate">{link.url}</p>
                     </a>
                   ))
