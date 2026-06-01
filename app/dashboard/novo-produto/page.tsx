@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
@@ -28,7 +28,7 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
-export default function NewProductPage() {
+function NovoProdutoContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const productId = searchParams.get('product_id')
@@ -456,5 +456,13 @@ export default function NewProductPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function NewProductPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <NovoProdutoContent />
+    </Suspense>
   )
 }
