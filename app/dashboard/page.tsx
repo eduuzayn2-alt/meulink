@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
 
@@ -587,16 +588,43 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white">
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={handleSignOut}
-          className="rounded-full border border-zinc-700 bg-transparent px-3 py-2 text-sm text-zinc-200 hover:bg-white/5"
-        >
-          Sair
-        </button>
-      </div>
+      
+
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="w-72 bg-[#0b0b0b] border-r border-zinc-800 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-lg font-bold">Menu</div>
+              <button onClick={() => setMobileMenuOpen(false)} className="text-zinc-400">✕</button>
+            </div>
+            <nav className="space-y-3">
+              {['Visão geral', 'Links', 'Perfil', 'Ajustes'].map((item) => (
+                <button key={item} className="w-full rounded-3xl px-4 py-3 text-left text-white transition hover:bg-white/5">
+                  {item}
+                </button>
+              ))}
+              <a href="/dashboard/relatorios" className="block rounded-3xl px-4 py-3 text-left text-white hover:bg-white/5">Relatórios</a>
+            </nav>
+            <div className="mt-8">
+              {profile?.plan === 'pro' ? (
+                <div>
+                  <p className="font-semibold text-white">✓ Plano Pro</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="font-semibold text-white">Plano Gratuito</p>
+                  <div className="mt-3">
+                    <button onClick={() => { setMobileMenuOpen(false); startCheckout('sidebar') }} className="rounded-full bg-amber-400 px-4 py-2 font-semibold text-black">Upgrade Pro →</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+        </div>
+      )}
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-8 xl:grid-cols-[260px_minmax(560px,1fr)_420px] xl:px-8">
-        <aside className="hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 xl:block">
+        <aside className="hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 xl:block" id="left-sidebar">
           <div className="text-sm uppercase tracking-[0.3em] text-zinc-500">Navegação</div>
           <nav className="mt-8 space-y-3">
             {['Visão geral', 'Links', 'Perfil', 'Ajustes'].map((item) => (
@@ -609,10 +637,20 @@ export default function DashboardPage() {
             </Link>
           </nav>
           <div className="mt-10 rounded-3xl border border-zinc-800 bg-[#101010] p-5 text-sm text-zinc-400">
-            <p className="font-semibold text-white">Linkify Premium</p>
-            <p className="mt-3 text-sm leading-6 text-zinc-500">
-              Controle a identidade da sua página com um painel enxuto e moderno.
-            </p>
+            {profile?.plan === 'pro' ? (
+              <div>
+                <p className="font-semibold text-white">✓ Plano Pro</p>
+                <p className="mt-3 text-sm leading-6 text-emerald-400">Aproveite recursos premium</p>
+              </div>
+            ) : (
+              <div>
+                <p className="font-semibold text-white">Plano Gratuito</p>
+                <p className="mt-3 text-sm leading-6 text-zinc-500">Atualize para desbloquear mais recursos.</p>
+                <div className="mt-4">
+                  <button onClick={() => startCheckout('sidebar')} className="rounded-full bg-amber-400 px-4 py-2 font-semibold text-black">Upgrade Pro →</button>
+                </div>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -632,12 +670,19 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="rounded-3xl border border-zinc-800 bg-[#111111] px-4 py-3 text-sm text-zinc-300 flex items-center gap-3">
-                <div>{hasProfile ? 'Editor ativo' : 'Comece pelo onboarding'}</div>
+                <div className="hidden xl:block">{hasProfile ? null : 'Comece pelo onboarding'}</div>
                 <button
                   onClick={handleSignOut}
                   className="ml-2 inline-flex items-center rounded-full border border-zinc-700 bg-transparent px-3 py-1 text-sm text-zinc-300 hover:bg-white/3"
                 >
                   Sair
+                </button>
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="ml-2 xl:hidden inline-flex items-center rounded-full border border-zinc-700 bg-transparent px-3 py-1 text-sm text-zinc-300 hover:bg-white/3"
+                  aria-label="Abrir menu"
+                >
+                  ☰
                 </button>
               </div>
             </div>
@@ -979,7 +1024,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <aside className="rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
+        <aside className="hidden md:block rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 shadow-[0_40px_120px_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Preview</p>
@@ -1068,7 +1113,7 @@ export default function DashboardPage() {
                   Seus links aparecerão aqui depois de adicionados.
                 </div>
               ) : (
-                previewLinks.map((link) => (
+                  previewLinks.map((link) => (
                   <a
                     key={link.id}
                     href={link.url}
@@ -1081,7 +1126,9 @@ export default function DashboardPage() {
                     }`}
                   >
                     <p className="font-semibold">{link.titulo}</p>
-                    <p className="mt-1 text-sm text-zinc-400 truncate">{link.url}</p>
+                    {link.icon_name !== 'WhatsApp' && (
+                      <p className="mt-1 text-sm text-zinc-400 truncate">{link.url}</p>
+                    )}
                   </a>
                 ))
               )}
