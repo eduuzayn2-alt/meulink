@@ -327,10 +327,7 @@ export default function LoginPage() {
             <div>
               <h2 className="text-2xl font-bold mb-3">Confira seu e-mail</h2>
               <p style={{ color: '#888888' }} className="text-sm mb-4">
-                Enviamos um link de confirmação para <strong>{confirmationEmail}</strong>
-              </p>
-              <p style={{ color: '#888888' }} className="text-sm">
-                Verifique sua caixa de entrada para ativar sua conta. O link expira em 24 horas.
+                Enviamos um email de confirmação para <strong>{confirmationEmail}</strong>. Verifique sua caixa de entrada e clique no link para ativar sua conta.
               </p>
             </div>
 
