@@ -136,7 +136,7 @@ export default async function Page({ params }: { params: { username: string } })
         </div>
         <footer style={{textAlign:'center',color:'#888',fontSize:'0.75rem',marginTop:'3rem'}}>
           <a
-            href="https://meulink-ruby.vercel.app/login"
+            href="https://linkify.app.br/login"
             target="_blank"
             rel="noreferrer"
             style={{color:'#888',textDecoration:'none'}}

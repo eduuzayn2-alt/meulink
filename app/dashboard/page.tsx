@@ -493,7 +493,7 @@ export default function DashboardPage() {
     setDragIndex(null)
   }
 
-  const shareUrl = `https://meulink-ruby.vercel.app/${username}`
+  const shareUrl = `https://linkify.app.br/${username}`
 
   const copyShareLink = async () => {
     if (!username) {
@@ -747,7 +747,7 @@ export default function DashboardPage() {
                       {usernameError ? (
                         <span className="mt-2 block text-xs text-red-400">{usernameError}</span>
                       ) : (
-                        <span className="mt-2 block text-xs text-zinc-500">meulink-ruby.vercel.app/{username || 'seunome'}</span>
+                        <span className="mt-2 block text-xs text-zinc-500">linkify.app.br/{username || 'seunome'}</span>
                       )}
                     </label>
                     <label className="block text-sm text-zinc-300">
@@ -824,7 +824,7 @@ export default function DashboardPage() {
                     <h2 className="mt-3 text-2xl font-semibold">Ajuste sua presença</h2>
                   </div>
                   <a
-                    href={`https://meulink-ruby.vercel.app/${username}`}
+                    href={`https://linkify.app.br/${username}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
@@ -1052,7 +1052,7 @@ export default function DashboardPage() {
             <div className="flex-1 overflow-hidden rounded-full border border-zinc-800 bg-[#0b0b0b] px-4 py-3">
               <p className="text-xs text-zinc-400">Seu link público</p>
               <div className="mt-1 flex items-center gap-3">
-                <span className="truncate font-medium text-white">{username ? `meulink-ruby.vercel.app/${username}` : 'meulink-ruby.vercel.app/seunome'}</span>
+                <span className="truncate font-medium text-white">{username ? `linkify.app.br/${username}` : 'linkify.app.br/seunome'}</span>
               </div>
             </div>
             <div className="flex-shrink-0">
