@@ -2,8 +2,45 @@ import Link from 'next/link'
 import SubscribeButton from './components/SubscribeButton'
 
 export const metadata = {
-  title: 'Linkify — O link da bio que trabalha por você',
-  description: 'Transforme seus seguidores em clientes. Crie sua página em 2 minutos, adicione seus links, monte sua loja e venda com Pix.',
+  title: 'Linkify — Crie seu link da bio e venda com Pix | Grátis',
+  description: 'Crie sua página de links para o Instagram em 2 minutos. Adicione seus links, monte sua loja com Pix e comece a vender. Grátis para sempre.',
+  keywords: [
+    'link na bio',
+    'link bio instagram',
+    'criar link bio grátis',
+    'linktree brasileiro',
+    'página de links',
+  ],
+  openGraph: {
+    title: 'Linkify — Crie seu link da bio e venda com Pix | Grátis',
+    description: 'Crie sua página de links para o Instagram em 2 minutos. Adicione seus links, monte sua loja com Pix e comece a vender. Grátis para sempre.',
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Linkify',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Linkify — Crie seu link da bio e venda com Pix | Grátis',
+    description: 'Crie sua página de links para o Instagram em 2 minutos. Adicione seus links, monte sua loja com Pix e comece a vender. Grátis para sempre.',
+  },
+}
+
+const softwareApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Linkify',
+  url: 'https://linkify.com',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: 'Crie sua página de links para o Instagram em 2 minutos. Adicione seus links, monte sua loja com Pix e comece a vender. Grátis para sempre.',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'BRL',
+    url: 'https://linkify.com/login',
+    availability: 'https://schema.org/InStock',
+  },
+  featureList: 'Links personalizados, loja com Pix, analytics, perfil público, página de links para Instagram',
 }
 
 const stats = [
@@ -15,6 +52,10 @@ const stats = [
 export default function LandingPage() {
   return (
     <div style={{ backgroundColor: '#0a0a0a' }} className="min-h-screen text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+      />
       {/* NAVBAR */}
       <nav className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: 'rgba(10, 10, 10, 0.7)' }}>
         <div className="backdrop-blur-md border-b" style={{ borderColor: '#222222' }}>
