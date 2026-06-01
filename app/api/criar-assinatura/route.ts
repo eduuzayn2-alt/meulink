@@ -26,7 +26,9 @@ export async function POST(request: Request) {
         success: backUrl,
       },
       auto_return: 'approved',
-      external_reference: body.external_reference ?? undefined,
+      // include user id in metadata to identify payer in webhook
+      metadata: body.user_id ? { user_id: body.user_id } : undefined,
+      external_reference: body.external_reference ?? body.user_id ?? undefined,
     }
 
     if (body.payer_email) {

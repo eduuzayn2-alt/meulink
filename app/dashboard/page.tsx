@@ -523,11 +523,22 @@ export default function DashboardPage() {
         const { data: userData } = await supabase.auth.getUser()
         const email = userData?.user?.email
 
+        // send a lightweight server-side event via sendBeacon (best-effort)
+        try {
+          const eventPayload = JSON.stringify({ event: 'subscribe_click', source, user_id: userId, timestamp: new Date().toISOString() })
+          const blob = new Blob([eventPayload], { type: 'application/json' })
+          const beaconOk = typeof navigator !== 'undefined' && (navigator as any).sendBeacon && (navigator as any).sendBeacon('/api/track-event', blob)
+          if (!beaconOk) {
+            // fallback to fetch (do not await to keep UX snappy)
+            fetch('/api/track-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: eventPayload }).catch(() => {})
+          }
+        } catch (e) {}
+
         // create Mercado Pago preference
         const res = await fetch('/api/criar-assinatura', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ payer_email: email }),
+          body: JSON.stringify({ payer_email: email, user_id: userId }),
         })
 
         const json = await res.json()

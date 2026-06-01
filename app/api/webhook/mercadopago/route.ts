@@ -30,19 +30,36 @@ export async function POST(request: Request) {
 
     const payment = await paymentRes.json()
 
+    // Log raw payment webhook for auditing
+    try {
+      const mpId = payment?.id ?? id
+      const topic = body?.topic ?? null
+      await supabase.from('mp_webhook_logs').insert([
+        { mp_id: mpId, topic, raw: { body, payment } },
+      ])
+    } catch (e) {
+      console.warn('Failed to insert webhook log', e)
+    }
+
     // Check approval
     const status = payment?.status || payment?.status_detail || null
 
     if (status === 'approved' || payment?.status === 'approved') {
-      const externalRef = payment?.external_reference || payment?.order?.external_reference || payment?.metadata?.external_reference
+      // prefer metadata.user_id set on preference, fall back to external_reference
+      const payerUserId =
+        payment?.metadata?.user_id ||
+        payment?.order?.metadata?.user_id ||
+        payment?.external_reference ||
+        payment?.order?.external_reference ||
+        null
 
-      if (externalRef) {
+      if (payerUserId) {
         try {
           // Attempt to update profiles.plan = 'pro' and subscription_status = 'active'
           const { data, error } = await supabase
             .from('profiles')
             .update({ plan: 'pro', subscription_status: 'active' })
-            .eq('user_id', externalRef)
+            .eq('user_id', payerUserId)
             .select()
 
           if (error) {
@@ -52,7 +69,7 @@ export async function POST(request: Request) {
           // Insert subscription record
           try {
             const subPayload = {
-              user_id: externalRef,
+              user_id: payerUserId,
               mp_payment_id: payment?.id ?? null,
               status: 'active',
               amount: payment?.transaction_amount ?? null,
