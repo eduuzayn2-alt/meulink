@@ -601,7 +601,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Crie sua página Linkify</h1>
                   {profile?.plan === 'pro' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-black">Pro</span>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-sm font-semibold text-black">✓ Plano Pro ativo</span>
                   )}
                 </div>
                 <p className="mt-3 max-w-2xl text-zinc-400">
@@ -620,18 +620,19 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Upgrade banner for free users */}
+          {/* Status bar for free users */}
           {profile?.plan !== 'pro' && (
-            <div className="rounded-[1.5rem] border border-zinc-800 bg-[#111111] p-4 text-sm text-zinc-200 flex items-center justify-between">
-              <div>
-                <strong>Plano Grátis</strong> — 2 links disponíveis. Faça upgrade para o Pro e desbloqueie recursos essenciais: até 10 links, loja com Pix integrada, sem marca d'água e analytics completo.
+            <div className="w-full rounded-xl bg-amber-400/95 border border-amber-500 p-3 text-black flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⚡</span>
+                <div className="text-sm font-semibold">Plano Gratuito — {links.length}/2 links usados</div>
               </div>
               <div>
                 <button
                   onClick={() => startCheckout('banner')}
-                  className="rounded-full bg-emerald-600 px-4 py-2 font-semibold text-black"
+                  className="rounded-full bg-white px-4 py-2 font-semibold text-black"
                 >
-                  Assinar Pro por R$9,90/mês
+                  Upgrade para Pro R$9,90/mês →
                 </button>
               </div>
             </div>
@@ -922,6 +923,32 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Upgrade card below links for free users */}
+                {profile?.plan !== 'pro' && (
+                  <div className="mt-6 rounded-2xl border-2 border-amber-400 bg-[#0b0b0b] p-6">
+                    <div className="flex items-start gap-6">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold">Desbloqueie todo o potencial do Linkify</h3>
+                        <ul className="mt-3 text-sm space-y-2 text-zinc-300">
+                          <li>• Até 10 links — mais espaço para vender</li>
+                          <li>• Loja com Pix integrada</li>
+                          <li>• Sem marca d'água</li>
+                          <li>• Analytics avançado</li>
+                        </ul>
+                      </div>
+                      <div className="flex flex-col items-end justify-between">
+                        <div className="text-2xl font-bold text-amber-300">R$9,90/mês</div>
+                        <button
+                          onClick={() => startCheckout('card')}
+                          className="mt-4 rounded-full bg-amber-400 px-6 py-3 font-semibold text-black"
+                        >
+                          Assinar Pro agora →
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
