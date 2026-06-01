@@ -20,6 +20,7 @@ interface ProfileData {
   nome: string
   bio: string
   foto_url: string
+  plan?: string
   cover_url?: string
   username: string
 }
@@ -59,6 +60,8 @@ export default function DashboardPage() {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [usernameError, setUsernameError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeLoading, setUpgradeLoading] = useState(false)
 
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
@@ -385,7 +388,14 @@ export default function DashboardPage() {
     setLoading(true)
     setErrorMessage(null)
     setSuccessMessage(null)
-
+    // Enforce plan limits: free = 2, pro = 10
+    const plan = profile?.plan ?? 'free'
+    const maxLinks = plan === 'pro' ? 10 : 2
+    if (!editingLinkId && links.length >= maxLinks) {
+      setLoading(false)
+      setShowUpgradeModal(true)
+      return
+    }
     if (editingLinkId) {
       const { data, error } = await supabase
         .from('links')
@@ -500,6 +510,58 @@ export default function DashboardPage() {
     }
   }
 
+  const startCheckout = async (source = 'banner') => {
+    setUpgradeLoading(true)
+    setErrorMessage(null)
+    try {
+      // lightweight analytics: push to dataLayer and attempt beacon
+      try {
+        ;(window as any).dataLayer?.push?.({ event: 'subscribe_click', source })
+      } catch (e) {}
+
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const email = userData?.user?.email
+
+        // create Mercado Pago preference
+        const res = await fetch('/api/criar-assinatura', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payer_email: email }),
+        })
+
+        const json = await res.json()
+        if (res.ok && (json.init_point || json.sandbox_init_point)) {
+          const url = json.init_point ?? json.sandbox_init_point
+          // open checkout in a new tab
+          try {
+            window.open(url, '_blank')
+          } catch (e) {
+            // fallback to redirect
+            window.location.href = url
+          }
+          setUpgradeLoading(false)
+          return
+        }
+      } catch (e) {
+        // ignore inner errors
+      }
+
+      setErrorMessage('Não foi possível iniciar o checkout. Tente novamente.')
+    } catch (e) {
+      setErrorMessage('Erro ao iniciar checkout. Tente novamente.')
+    }
+    setUpgradeLoading(false)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      router.push('/login')
+    }
+  }
+
   if (fetching) {
     return (
       <main className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
@@ -536,16 +598,44 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Painel</p>
-                <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Crie sua página Linkify</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">Crie sua página Linkify</h1>
+                  {profile?.plan === 'pro' && (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-black">Pro</span>
+                  )}
+                </div>
                 <p className="mt-3 max-w-2xl text-zinc-400">
                   Um painel leve para construir sua página pública com perfil, links e visualização ao vivo.
                 </p>
               </div>
-              <div className="rounded-3xl border border-zinc-800 bg-[#111111] px-4 py-3 text-sm text-zinc-300">
-                {hasProfile ? 'Editor ativo' : 'Comece pelo onboarding'}
+              <div className="rounded-3xl border border-zinc-800 bg-[#111111] px-4 py-3 text-sm text-zinc-300 flex items-center gap-3">
+                <div>{hasProfile ? 'Editor ativo' : 'Comece pelo onboarding'}</div>
+                <button
+                  onClick={handleSignOut}
+                  className="ml-2 inline-flex items-center rounded-full border border-zinc-700 bg-transparent px-3 py-1 text-sm text-zinc-300 hover:bg-white/3"
+                >
+                  Sair
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Upgrade banner for free users */}
+          {profile?.plan !== 'pro' && (
+            <div className="rounded-[1.5rem] border border-zinc-800 bg-[#111111] p-4 text-sm text-zinc-200 flex items-center justify-between">
+              <div>
+                <strong>Plano Grátis</strong> — 2 links disponíveis. Faça upgrade para o Pro e desbloqueie recursos essenciais: até 10 links, loja com Pix integrada, sem marca d'água e analytics completo.
+              </div>
+              <div>
+                <button
+                  onClick={() => startCheckout('banner')}
+                  className="rounded-full bg-emerald-600 px-4 py-2 font-semibold text-black"
+                >
+                  Assinar Pro por R$9,90/mês
+                </button>
+              </div>
+            </div>
+          )}
 
           {errorMessage ? (
             <div className="rounded-[2rem] border border-red-700 bg-red-950/80 p-5 text-sm text-red-200">{errorMessage}</div>
@@ -949,6 +1039,29 @@ export default function DashboardPage() {
           </div>
         </aside>
       </div>
+          {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 max-w-lg rounded-2xl bg-[#0b0b0b] border border-zinc-800 p-6">
+            <h3 className="text-lg font-bold">Amplie seu alcance com Linkify Pro</h3>
+            <p className="mt-2 text-sm text-zinc-400">Você já aproveita o essencial — agora imagine o próximo nível: até 10 links, loja com Pix integrada para vender imediatamente, remoção da marca d'água e analytics avançado para aumentar suas conversões. Atualize para o Pro e comece a transformar cliques em vendas.</p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="rounded-full px-4 py-2 bg-transparent border border-zinc-700 text-sm text-zinc-200"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => startCheckout('modal')}
+                className="rounded-full px-4 py-2 bg-emerald-600 text-black font-semibold"
+              >
+                {upgradeLoading ? 'Abrindo...' : 'Assinar Pro por R$9,90/mês'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   )
 }
