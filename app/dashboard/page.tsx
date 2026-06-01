@@ -515,7 +515,12 @@ export default function DashboardPage() {
   const startCheckout = async (source = 'banner') => {
     setUpgradeLoading(true)
     setErrorMessage(null)
+
+    let checkoutWindow: Window | null = null
     try {
+      // Open a new window immediately to avoid popup blockers.
+      checkoutWindow = window.open('about:blank', '_blank')
+
       // lightweight analytics: push to dataLayer and attempt beacon
       try {
         ;(window as any).dataLayer?.push?.({ event: 'subscribe_click', source })
@@ -546,12 +551,11 @@ export default function DashboardPage() {
         const json = await res.json()
         if (res.ok && (json.init_point || json.sandbox_init_point)) {
           const url = json.init_point ?? json.sandbox_init_point
-          // open checkout in a new tab
-          try {
+          // open checkout in the new tab opened earlier
+          if (checkoutWindow) {
+            checkoutWindow.location.href = url
+          } else {
             window.open(url, '_blank')
-          } catch (e) {
-            // fallback to redirect
-            window.location.href = url
           }
           setUpgradeLoading(false)
           return
@@ -560,8 +564,14 @@ export default function DashboardPage() {
         // ignore inner errors
       }
 
+      if (checkoutWindow) {
+        checkoutWindow.close()
+      }
       setErrorMessage('Não foi possível iniciar o checkout. Tente novamente.')
     } catch (e) {
+      if (checkoutWindow) {
+        checkoutWindow.close()
+      }
       setErrorMessage('Erro ao iniciar checkout. Tente novamente.')
     }
     setUpgradeLoading(false)
