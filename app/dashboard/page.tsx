@@ -26,6 +26,23 @@ interface ProfileData {
   username: string
 }
 
+interface ProductItem {
+  id: string
+  user_id: string
+  username: string
+  nome: string
+  descricao: string | null
+  preco: string
+  imagem_url: string | null
+  tipo_entrega: 'arquivo' | 'link'
+  arquivo_url: string | null
+  link_externo: string | null
+  slug: string
+  ativo: boolean
+  total_vendas: number
+  criado_em: string
+}
+
 const defaultIconOptions = [
   { value: '', label: 'Nenhum' },
   { value: 'Instagram', label: 'Instagram' },
@@ -64,6 +81,7 @@ export default function DashboardPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [products, setProducts] = useState<ProductItem[]>([])
 
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
@@ -137,15 +155,16 @@ export default function DashboardPage() {
       const ownerId = data.session.user.id
       setUserId(ownerId)
 
-      const [{ data: profileData, error: profileError }, { data: linkData, error: linkError }] = await Promise.all([
+      const [{ data: profileData, error: profileError }, { data: linkData, error: linkError }, { data: productData, error: productError }] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', ownerId).maybeSingle(),
         supabase.from('links').select('*').eq('user_id', ownerId).order('criado_em', { ascending: false }),
+        supabase.from('produtos').select('*').eq('user_id', ownerId).order('criado_em', { ascending: false }),
       ])
 
-      if (profileError || linkError) {
+      if (profileError || linkError || productError) {
         setErrorMessage(
           getFriendlyErrorMessage(
-            profileError ?? linkError,
+            profileError ?? linkError ?? productError,
             'Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.'
           )
         )
@@ -166,7 +185,13 @@ export default function DashboardPage() {
         setLinks(linkData ?? [])
       }
 
-      // fetch subscriptions via server endpoint using session token
+      if (productError) {
+        setErrorMessage(getFriendlyErrorMessage(productError, 'Não foi possível carregar seus produtos.'))
+      } else {
+        setProducts(productData ?? [])
+      }
+
+      // fetch subscriptions via servidor endpoint using session token
       try {
         const token = data.session.access_token
         if (token) {
@@ -608,7 +633,7 @@ export default function DashboardPage() {
               <button onClick={() => setMobileMenuOpen(false)} className="text-zinc-400">✕</button>
             </div>
             <nav className="space-y-3">
-              {['Visão geral', 'Links', 'Perfil', 'Ajustes'].map((item) => (
+              {['Visão geral', 'Links', 'Perfil', 'Ajustes', 'Loja'].map((item) => (
                 <button key={item} className="w-full rounded-3xl px-4 py-3 text-left text-white transition hover:bg-white/5">
                   {item}
                 </button>
@@ -637,7 +662,7 @@ export default function DashboardPage() {
         <aside className="hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 xl:block" id="left-sidebar">
           <div className="text-sm uppercase tracking-[0.3em] text-zinc-500">Navegação</div>
           <nav className="mt-8 space-y-3">
-            {['Visão geral', 'Links', 'Perfil', 'Ajustes'].map((item) => (
+            {['Visão geral', 'Links', 'Perfil', 'Ajustes', 'Loja'].map((item) => (
               <button key={item} className="w-full rounded-3xl px-4 py-3 text-left text-white transition hover:bg-white/5">
                 {item}
               </button>
@@ -715,6 +740,124 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+          <div className="rounded-[2rem] border border-zinc-800 bg-[#111111] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+            {profile?.plan !== 'pro' ? (
+              <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-center">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Loja</p>
+                  <h2 className="mt-3 text-3xl font-semibold text-white">Venda seus produtos com Pix</h2>
+                  <p className="mt-4 max-w-2xl text-zinc-400">
+                    Crie e-books, mentorias, presets e cursos. Receba na hora via Pix direto no seu perfil.
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-zinc-300">
+                    <li>• Sem taxas confusas</li>
+                    <li>• Entrega automática ao comprador</li>
+                    <li>• Página de venda profissional para cada produto</li>
+                  </ul>
+                </div>
+                <div className="rounded-[2rem] border border-amber-400 bg-[#161616] p-6 text-center">
+                  <p className="text-sm uppercase tracking-[0.3em] text-amber-200">Pro</p>
+                  <div className="mt-4 text-3xl font-bold text-white">Linkify Loja</div>
+                  <p className="mt-3 text-zinc-400">Liberte seu negócio digital agora.</p>
+                  <button
+                    onClick={() => startCheckout('banner')}
+                    className="mt-8 rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-amber-300"
+                  >
+                    Desbloquear loja — Assinar Pro R$9,90/mês
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Loja</p>
+                    <h2 className="mt-3 text-3xl font-semibold text-white">Minha Loja</h2>
+                  </div>
+                  <button
+                    onClick={() => router.push('/dashboard/novo-produto')}
+                    className="rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+                  >
+                    + Criar produto
+                  </button>
+                </div>
+
+                {products.length === 0 ? (
+                  <div className="mt-8 rounded-[2rem] border border-zinc-800 bg-[#0f0f0f] p-8 text-center">
+                    <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Nenhum produto ainda</p>
+                    <h3 className="mt-4 text-2xl font-semibold text-white">Comece a vender com Linkify</h3>
+                    <p className="mt-3 text-zinc-400">Crie seu primeiro produto digital e receba vendas via Pix diretamente no seu perfil.</p>
+                    <button
+                      onClick={() => router.push('/dashboard/novo-produto')}
+                      className="mt-8 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
+                    >
+                      Criar meu primeiro produto
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                    {products.map((product) => (
+                      <div key={product.id} className="rounded-[2rem] border border-zinc-800 bg-[#0f0f0f] p-5 transition hover:border-white/20">
+                        <div className="flex items-start gap-4">
+                          <div className="h-20 w-20 overflow-hidden rounded-3xl bg-zinc-900">
+                            {product.imagem_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={product.imagem_url} alt={product.nome} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-sm text-zinc-500">Sem imagem</div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-zinc-400">{product.slug}</p>
+                            <h3 className="mt-2 text-xl font-semibold text-white">{product.nome}</h3>
+                            <p className="mt-2 text-sm text-zinc-400 line-clamp-2">{product.descricao}</p>
+                          </div>
+                        </div>
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-2">
+                            <div className="text-sm text-zinc-400">Preço</div>
+                            <div className="text-xl font-bold text-white">R$ {Number(product.preco).toFixed(2).replace('.', ',')}</div>
+                          </div>
+                          <div className="space-y-2 text-right">
+                            <div className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${product.ativo ? 'bg-emerald-500/15 text-emerald-300' : 'bg-zinc-700 text-zinc-300'}`}>
+                              {product.ativo ? 'Ativo' : 'Inativo'}
+                            </div>
+                            <div className="text-sm text-zinc-400">Vendas: {product.total_vendas}</div>
+                          </div>
+                        </div>
+                        <div className="mt-6 flex flex-wrap gap-3">
+                          <button
+                            onClick={() => router.push(`/dashboard/novo-produto?product_id=${product.id}`)}
+                            className="rounded-full border border-zinc-700 bg-transparent px-4 py-2 text-sm text-white hover:bg-white/5"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('Excluir este produto?')) return
+                              setLoading(true)
+                              const { error } = await supabase.from('produtos').delete().eq('id', product.id)
+                              setLoading(false)
+                              if (error) {
+                                setErrorMessage('Não foi possível excluir o produto. Tente novamente.')
+                                return
+                              }
+                              setProducts(products.filter((item) => item.id !== product.id))
+                              setSuccessMessage('Produto excluído com sucesso.')
+                            }}
+                            className="rounded-full border border-red-600 bg-red-600/10 px-4 py-2 text-sm text-red-200 hover:bg-red-600/20"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {errorMessage ? (
             <div className="rounded-[2rem] border border-red-700 bg-red-950/80 p-5 text-sm text-red-200">{errorMessage}</div>

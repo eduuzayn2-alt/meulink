@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../../lib/supabase'
+import { supabaseAdmin } from '../../../../lib/supabaseAdmin'
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     try {
       const mpId = payment?.id ?? id
       const topic = body?.topic ?? null
-      await supabase.from('mp_webhook_logs').insert([
+      await supabaseAdmin.from('mp_webhook_logs').insert([
         { mp_id: mpId, topic, raw: { body, payment } },
       ])
     } catch (e) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const status = payment?.status || payment?.status_detail || null
 
     if (status === 'approved' || payment?.status === 'approved') {
-      // prefer metadata.user_id set on preference, fall back to external_reference
+      const productId = payment?.metadata?.produto_id || payment?.order?.metadata?.produto_id || null
       const payerUserId =
         payment?.metadata?.user_id ||
         payment?.order?.metadata?.user_id ||
@@ -53,10 +53,39 @@ export async function POST(request: Request) {
         payment?.order?.external_reference ||
         null
 
+      if (productId) {
+        try {
+          const paymentId = payment?.id ?? null
+          const existingSale = await supabaseAdmin.from('vendas').select('id').eq('payment_id', paymentId).maybeSingle()
+
+          if (!existingSale?.data) {
+            const buyerEmail =
+              payment?.payer?.email ||
+              payment?.metadata?.comprador_email ||
+              payment?.order?.metadata?.comprador_email ||
+              null
+
+            await supabaseAdmin.from('vendas').insert({
+              produto_id: productId,
+              comprador_email: buyerEmail ?? 'não informado',
+              valor: payment?.transaction_amount ?? 0,
+              status: 'aprovado',
+              payment_id: paymentId,
+            })
+
+            const { data: currentProduct } = await supabaseAdmin.from('produtos').select('total_vendas').eq('id', productId).maybeSingle()
+            const nextCount = Number(currentProduct?.total_vendas ?? 0) + 1
+            await supabaseAdmin.from('produtos').update({ total_vendas: nextCount }).eq('id', productId)
+          }
+        } catch (e) {
+          console.warn('Erro ao processar venda de produto na webhook:', e)
+        }
+      }
+
       if (payerUserId) {
         try {
           // Attempt to update profiles.plan = 'pro' and subscription_status = 'active'
-          const { data, error } = await supabase
+          const { data, error } = await supabaseAdmin
             .from('profiles')
             .update({ plan: 'pro', subscription_status: 'active' })
             .eq('user_id', payerUserId)
@@ -77,7 +106,7 @@ export async function POST(request: Request) {
               raw: payment,
             }
 
-            const { data: subData, error: subError } = await supabase.from('subscriptions').insert(subPayload).select().maybeSingle()
+            const { data: subData, error: subError } = await supabaseAdmin.from('subscriptions').insert(subPayload).select().maybeSingle()
             if (subError) {
               console.warn('Erro ao inserir subscription na webhook:', subError.message)
             }
