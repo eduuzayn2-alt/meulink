@@ -88,6 +88,10 @@ export default function LoginPage() {
 
     // Create user profile
     if (data.user?.id) {
+      // Determine if this email should be granted admin for testing
+      const adminList = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+      const isAdmin = adminList.includes(signupEmail.toLowerCase())
+
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([
@@ -95,6 +99,7 @@ export default function LoginPage() {
             user_id: data.user.id,
             nome: signupName,
             username: signupEmail.split('@')[0] + Date.now(),
+            is_admin: isAdmin || false,
           }
         ])
 

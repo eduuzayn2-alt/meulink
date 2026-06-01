@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
@@ -595,6 +596,9 @@ export default function DashboardPage() {
                 {item}
               </button>
             ))}
+            <Link href="/dashboard/relatorios" className="w-full block rounded-3xl px-4 py-3 text-left text-white transition hover:bg-white/5">
+              Relatórios
+            </Link>
           </nav>
           <div className="mt-10 rounded-3xl border border-zinc-800 bg-[#101010] p-5 text-sm text-zinc-400">
             <p className="font-semibold text-white">Linkify Premium</p>
