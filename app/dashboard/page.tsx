@@ -587,6 +587,14 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={handleSignOut}
+          className="rounded-full border border-zinc-700 bg-transparent px-3 py-2 text-sm text-zinc-200 hover:bg-white/5"
+        >
+          Sair
+        </button>
+      </div>
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-8 xl:grid-cols-[260px_minmax(560px,1fr)_420px] xl:px-8">
         <aside className="hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 p-6 xl:block">
           <div className="text-sm uppercase tracking-[0.3em] text-zinc-500">Navegação</div>
