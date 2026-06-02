@@ -10,7 +10,7 @@ interface ProductPageProps {
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  const { username, slug } = params
+  const { username, slug } = await Promise.resolve(params)
   const { data: product, error } = await supabase
     .from('produtos')
     .select('*')

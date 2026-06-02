@@ -313,38 +313,60 @@ function NovoProdutoContent() {
     setSaving(true)
 
     try {
+      // Ensure username and slug are valid
+      if (!username || !username.trim()) {
+        setErrorMessage('Username não carregado. Recarregue a página e tente novamente.')
+        setSaving(false)
+        return
+      }
+
+      if (!form.slug || !form.slug.trim()) {
+        setErrorMessage('Slug inválido. Tente novamente.')
+        setSaving(false)
+        return
+      }
+
       const payload = {
         user_id: userId,
-        username,
-        nome: form.nome,
-        descricao: form.descricao,
+        username: username.trim(),
+        nome: form.nome.trim(),
+        descricao: form.descricao.trim(),
         preco: parsedPrice.toFixed(2),
         imagem_url: form.imagem_url,
         tipo_entrega: form.tipo_entrega,
         arquivo_url: form.tipo_entrega === 'arquivo' ? form.arquivo_url : null,
         link_externo: form.tipo_entrega === 'link' ? form.link_externo : null,
-        slug: form.slug,
+        slug: form.slug.trim(),
         ativo: form.ativo,
       }
+
+      console.log('Salvando produto:', { user_id: userId, username, slug: form.slug })
 
       if (productId) {
         const { error } = await supabase.from('produtos').update(payload).eq('id', productId)
         if (error) {
+          console.error('Erro ao atualizar produto:', error)
           setErrorMessage('Erro ao salvar o produto. Tente novamente.')
           setSaving(false)
           return
         }
+        console.log('Produto atualizado com sucesso')
         setSuccessMessage('Produto atualizado com sucesso.')
+        setTimeout(() => router.push('/dashboard'), 1500)
       } else {
         const { error } = await supabase.from('produtos').insert({ ...payload, total_vendas: 0 })
         if (error) {
+          console.error('Erro ao criar produto:', error)
           setErrorMessage('Erro ao salvar o produto. Tente novamente.')
           setSaving(false)
           return
         }
+        console.log('Produto criado com sucesso')
         setSuccessMessage('Produto criado com sucesso.')
+        setTimeout(() => router.push('/dashboard'), 1500)
       }
     } catch (e) {
+      console.error('Exceção ao salvar produto:', e)
       setErrorMessage('Erro ao salvar o produto. Tente novamente.')
     }
 
