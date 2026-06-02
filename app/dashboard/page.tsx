@@ -846,9 +846,10 @@ export default function DashboardPage() {
                               setProducts(products.filter((item) => item.id !== product.id))
                               setSuccessMessage('Produto excluído com sucesso.')
                             }}
-                            className="rounded-full border border-red-600 bg-red-600/10 px-4 py-2 text-sm text-red-200 hover:bg-red-600/20"
+                            disabled={loading}
+                            className="rounded-full border border-red-600 bg-red-600/10 px-4 py-2 text-sm text-red-200 hover:bg-red-600/20 disabled:opacity-60"
                           >
-                            Excluir
+                            {loading ? 'Excluindo...' : 'Excluir'}
                           </button>
                         </div>
                       </div>
@@ -1055,7 +1056,7 @@ export default function DashboardPage() {
                       disabled={loading}
                       className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
                     >
-                      {editingLinkId ? 'Salvar alterações' : '+ Adicionar'}
+                      {loading ? (editingLinkId ? 'Salvando alterações...' : 'Adicionando...') : (editingLinkId ? 'Salvar alterações' : '+ Adicionar')}
                     </button>
                   </div>
                 </div>
