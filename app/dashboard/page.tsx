@@ -541,6 +541,12 @@ export default function DashboardPage() {
     setUpgradeLoading(true)
     setErrorMessage(null)
 
+    if (!userId) {
+      setErrorMessage('Sessão expirada. Faça login novamente.')
+      setUpgradeLoading(false)
+      return
+    }
+
     let checkoutWindow: Window | null = null
     try {
       // Open a new window immediately to avoid popup blockers.

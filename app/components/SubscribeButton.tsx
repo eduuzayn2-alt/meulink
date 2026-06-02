@@ -21,6 +21,7 @@ export default function SubscribeButton() {
 
       const body = {
         payer_email: user.email,
+        user_id: user.id,
         external_reference: user.id,
       }
 

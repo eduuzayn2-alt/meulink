@@ -11,6 +11,10 @@ export async function POST(request: Request) {
     // You can accept body params if needed in the future
     const body = await request.json().catch(() => ({}))
 
+    if (!body.user_id) {
+      return NextResponse.json({ error: 'user_id obrigatório para criar assinatura' }, { status: 400 })
+    }
+
     const backUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/pagamento/sucesso`
 
     const payload: any = {
@@ -27,8 +31,8 @@ export async function POST(request: Request) {
       },
       auto_return: 'approved',
       // include user id in metadata to identify payer in webhook
-      metadata: body.user_id ? { user_id: body.user_id } : undefined,
-      external_reference: body.external_reference ?? body.user_id ?? undefined,
+      metadata: { user_id: body.user_id },
+      external_reference: body.external_reference ?? body.user_id,
     }
 
     if (body.payer_email) {
