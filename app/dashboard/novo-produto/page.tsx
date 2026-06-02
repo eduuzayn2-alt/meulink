@@ -138,40 +138,12 @@ function NovoProdutoContent() {
   const productUrl = username && form.slug ? `${BASE_URL}/${username}/${form.slug}` : `${BASE_URL}/${username || 'seunome'}/${form.slug || 'seu-produto'}`
 
   const handleImageFile = async (file: File | null) => {
-    if (!file || !userId) return
-    setErrorMessage(null)
-    setSaving(true)
+    if (!file) return
 
-    try {
-      const filePath = `produtos-imagem/${userId}/${Date.now()}-${file.name}`
-      const { error: uploadError } = await supabase.storage.from('produtos-imagens').upload(filePath, file, { upsert: true })
-      if (uploadError) {
-        setErrorMessage('Erro ao enviar a imagem. Tente novamente.')
-        setSaving(false)
-        return
-      }
-
-      const { data: publicData } = supabase.storage.from('produtos-imagens').getPublicUrl(filePath)
-      const publicUrl = (publicData as any)?.publicUrl ?? ''
-      if (!publicUrl) {
-        setErrorMessage('Não foi possível gerar a URL da imagem.')
-        setSaving(false)
-        return
-      }
-
-      setForm((current) => ({ ...current, imagem_url: publicUrl }))
-      setImagePreview(publicUrl)
-    } catch (e) {
-      setErrorMessage('Erro ao enviar a imagem. Tente novamente.')
-    }
-
-    setSaving(false)
-  }
-
-  const handleDigitalFile = async (file: File | null) => {
-    if (!file || !userId) return
-    if (file.size > 50 * 1024 * 1024) {
-      setErrorMessage('O arquivo precisa ter até 50MB.')
+    // Validate user session
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError || !userData?.user?.id) {
+      setErrorMessage('Sessão expirada. Faça login novamente antes de enviar uma imagem.')
       return
     }
 
@@ -179,26 +151,109 @@ function NovoProdutoContent() {
     setSaving(true)
 
     try {
-      const filePath = `produtos-arquivos/${userId}/${Date.now()}-${file.name}`
-      const { error: uploadError } = await supabase.storage.from('produtos-arquivos').upload(filePath, file, { upsert: true })
+      // Extract file extension
+      const fileExt = file.name.split('.').pop() || 'jpg'
+      const filePath = `${userId}-${Date.now()}.${fileExt}`
+      
+      console.log('Iniciando upload de imagem:', { filePath, fileName: file.name, fileSize: file.size })
+
+      const { error: uploadError } = await supabase.storage
+        .from('produtos-imagens')
+        .upload(filePath, file, { upsert: true })
+
       if (uploadError) {
-        setErrorMessage('Erro ao enviar o arquivo. Tente novamente.')
+        console.error('Erro ao fazer upload da imagem:', uploadError)
+        setErrorMessage(`Erro ao enviar a imagem: ${uploadError.message || 'Tente novamente.'}`)
         setSaving(false)
         return
       }
 
-      const { data: publicData } = supabase.storage.from('produtos-arquivos').getPublicUrl(filePath)
+      console.log('Upload bem sucedido. Gerando URL pública...')
+
+      const { data: publicData } = supabase.storage
+        .from('produtos-imagens')
+        .getPublicUrl(filePath)
+
       const publicUrl = (publicData as any)?.publicUrl ?? ''
+      
       if (!publicUrl) {
-        setErrorMessage('Não foi possível gerar a URL do arquivo.')
+        console.error('Falha ao gerar URL pública')
+        setErrorMessage('Não foi possível gerar a URL da imagem. Tente novamente.')
         setSaving(false)
         return
       }
 
+      console.log('URL pública gerada:', publicUrl)
+      setForm((current) => ({ ...current, imagem_url: publicUrl }))
+      setImagePreview(publicUrl)
+      setSuccessMessage('Imagem carregada com sucesso.')
+    } catch (e) {
+      console.error('Exceção ao fazer upload de imagem:', e)
+      setErrorMessage('Erro ao processar a imagem. Tente novamente.')
+    }
+
+    setSaving(false)
+  }
+
+  const handleDigitalFile = async (file: File | null) => {
+    if (!file) return
+
+    // Check file size before anything else
+    if (file.size > 50 * 1024 * 1024) {
+      setErrorMessage('O arquivo precisa ter até 50MB.')
+      return
+    }
+
+    // Validate user session
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError || !userData?.user?.id) {
+      setErrorMessage('Sessão expirada. Faça login novamente antes de enviar um arquivo.')
+      return
+    }
+
+    setErrorMessage(null)
+    setSaving(true)
+
+    try {
+      // Extract file extension
+      const fileExt = file.name.split('.').pop() || 'bin'
+      const filePath = `${userId}-${Date.now()}.${fileExt}`
+
+      console.log('Iniciando upload de arquivo:', { filePath, fileName: file.name, fileSize: file.size })
+
+      const { error: uploadError } = await supabase.storage
+        .from('produtos-arquivos')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        console.error('Erro ao fazer upload do arquivo:', uploadError)
+        setErrorMessage(`Erro ao enviar o arquivo: ${uploadError.message || 'Tente novamente.'}`)
+        setSaving(false)
+        return
+      }
+
+      console.log('Upload bem sucedido. Gerando URL pública...')
+
+      const { data: publicData } = supabase.storage
+        .from('produtos-arquivos')
+        .getPublicUrl(filePath)
+
+      const publicUrl = (publicData as any)?.publicUrl ?? ''
+
+      if (!publicUrl) {
+        console.error('Falha ao gerar URL pública do arquivo')
+        setErrorMessage('Não foi possível gerar a URL do arquivo. Tente novamente.')
+        setSaving(false)
+        return
+      }
+
+      console.log('URL pública gerada:', publicUrl)
       setForm((current) => ({ ...current, arquivo_url: publicUrl }))
       setFileName(file.name)
+      setSuccessMessage('Arquivo carregado com sucesso.')
     } catch (e) {
-      setErrorMessage('Erro ao enviar o arquivo. Tente novamente.')
+      console.error('Exceção ao fazer upload de arquivo:', e)
+      setErrorMessage('Erro ao processar o arquivo. Tente novamente.')
     }
 
     setSaving(false)
