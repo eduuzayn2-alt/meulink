@@ -11,12 +11,15 @@ export default function LoginPage() {
   // Login state
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
   
   // Signup state
   const [signupName, setSignupName] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('')
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false)
   const [signupTerms, setSignupTerms] = useState(false)
   
   // Common state
@@ -136,203 +139,259 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ backgroundColor: '#0a0a0a' }} className="min-h-screen text-white flex items-center justify-center py-12 px-4">
-      {/* LOGIN SCREEN */}
-      {screen === 'login' && (
-        <div className="w-full max-w-md rounded-2xl p-8 border" style={{ backgroundColor: '#111111', borderColor: '#333333' }}>
-          <div className="text-center mb-8">
-            <div className="text-3xl font-bold mb-2">Linkify</div>
-            <p style={{ color: '#888888' }} className="text-sm">O link da bio que vende por você</p>
-          </div>
-
-          <h2 className="text-2xl font-bold mb-8 text-center">Entrar na sua conta</h2>
-
-          {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">E-mail</label>
-              <input
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                placeholder="seu@exemplo.com"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Senha</label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                placeholder="••••••••"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleLogin}
-            disabled={loading}
-            style={{ backgroundColor: '#ffffff' }}
-            className="w-full py-3 font-semibold rounded-lg text-black transition hover:opacity-90 disabled:opacity-60 mb-4"
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-
-          <button
-            onClick={handleForgotPassword}
-            disabled={loading}
-            className="w-full text-sm py-2 transition"
-            style={{ color: '#888888' }}
-          >
-            Esqueci minha senha
-          </button>
-
-          <div className="mt-6 text-center text-sm">
-            <span style={{ color: '#888888' }}>Não tem conta? </span>
-            <button
-              onClick={() => {
-                setScreen('signup')
-                setErrorMessage(null)
-              }}
-              className="font-semibold text-white hover:opacity-80 transition"
-            >
-              Criar conta grátis →
-            </button>
-          </div>
+    <main className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-md rounded-[2rem] border border-zinc-800 bg-[#111111] p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)]">
+        <div className="text-center mb-8">
+          <div className="text-4xl font-bold tracking-tight text-white">Linkify</div>
+          <p className="mt-2 text-sm text-zinc-500">O link da bio que vende por você</p>
         </div>
-      )}
 
-      {/* SIGNUP SCREEN */}
-      {screen === 'signup' && (
-        <div className="w-full max-w-md rounded-2xl p-8 border" style={{ backgroundColor: '#111111', borderColor: '#333333' }}>
-          <div className="text-center mb-8">
-            <div className="text-3xl font-bold">Linkify</div>
-          </div>
+        {screen === 'login' && (
+          <>
+            <h2 className="text-3xl font-semibold text-white text-center mb-6">Entrar na sua conta</h2>
 
-          <h2 className="text-2xl font-bold mb-8 text-center">Criar sua conta grátis</h2>
+            {errorMessage && (
+              <div className="mb-5 rounded-[1.5rem] border border-red-700 bg-red-950/80 p-4 text-sm text-red-200">
+                {errorMessage}
+              </div>
+            )}
 
-          {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
-              {errorMessage}
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">E-mail</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder="seu@exemplo.com"
+                  className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">Senha</label>
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                    placeholder="••••••••"
+                    className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 pr-12 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-white"
+                    aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showLoginPassword ? (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-5.14 0-9.4-3.28-11-7.5 1.08-2.73 2.93-4.9 5.18-6.23" />
+                        <path d="M1 1l22 22" />
+                        <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                        <path d="M10.66 5.53A9.956 9.956 0 0 1 12 4.5c5.14 0 9.4 3.28 11 7.5a13.5 13.5 0 0 1-1.87 3.84" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogin}
+                disabled={loading}
+                className="w-full rounded-[1.5rem] bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
+              >
+                {loading ? 'Entrando...' : 'Entrar'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 text-sm text-zinc-300 transition hover:border-emerald-500 hover:text-white disabled:opacity-60"
+              >
+                Esqueci minha senha
+              </button>
             </div>
-          )}
 
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Nome completo</label>
+            <div className="mt-6 text-center text-sm text-zinc-500">
+              Não tem conta?{' '}
+              <button
+                onClick={() => {
+                  setScreen('signup')
+                  setErrorMessage(null)
+                }}
+                className="font-semibold text-white hover:text-emerald-400"
+              >
+                Criar conta grátis →
+              </button>
+            </div>
+          </>
+        )}
+
+        {screen === 'signup' && (
+          <>
+            <h2 className="text-3xl font-semibold text-white text-center mb-6">Criar sua conta grátis</h2>
+
+            {errorMessage && (
+              <div className="mb-5 rounded-[1.5rem] border border-red-700 bg-red-950/80 p-4 text-sm text-red-200">
+                {errorMessage}
+              </div>
+            )}
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">Nome completo</label>
+                <input
+                  type="text"
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  placeholder="Seu nome"
+                  className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">E-mail</label>
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="seu@exemplo.com"
+                  className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">Senha</label>
+                <div className="relative">
+                  <input
+                    type={showSignupPassword ? 'text' : 'password'}
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 pr-12 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignupPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-white"
+                    aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showSignupPassword ? (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-5.14 0-9.4-3.28-11-7.5 1.08-2.73 2.93-4.9 5.18-6.23" />
+                        <path d="M1 1l22 22" />
+                        <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                        <path d="M10.66 5.53A9.956 9.956 0 0 1 12 4.5c5.14 0 9.4 3.28 11 7.5a13.5 13.5 0 0 1-1.87 3.84" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-zinc-300 mb-2">Confirmar senha</label>
+                <div className="relative">
+                  <input
+                    type={showSignupConfirmPassword ? 'text' : 'password'}
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-[1.5rem] border border-zinc-800 bg-[#0d0d0d] px-4 py-3 pr-12 text-white outline-none transition focus:border-emerald-500 focus:ring-emerald-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignupConfirmPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-white"
+                    aria-label={showSignupConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showSignupConfirmPassword ? (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-5.14 0-9.4-3.28-11-7.5 1.08-2.73 2.93-4.9 5.18-6.23" />
+                        <path d="M1 1l22 22" />
+                        <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                        <path d="M10.66 5.53A9.956 9.956 0 0 1 12 4.5c5.14 0 9.4 3.28 11 7.5a13.5 13.5 0 0 1-1.87 3.84" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-6 flex items-start gap-3 text-sm text-zinc-400">
               <input
-                type="text"
-                value={signupName}
-                onChange={(e) => setSignupName(e.target.value)}
-                placeholder="Seu nome"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+                type="checkbox"
+                id="terms"
+                checked={signupTerms}
+                onChange={(e) => setSignupTerms(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-zinc-700 bg-[#0d0d0d] text-emerald-500 focus:ring-emerald-500"
               />
+              <label htmlFor="terms" className="text-sm leading-6 text-zinc-400">
+                Concordo com os{' '}
+                <button onClick={() => {}} className="underline hover:text-white">
+                  Termos de uso
+                </button>{' '}
+                e{' '}
+                <button onClick={() => {}} className="underline hover:text-white">
+                  Política de privacidade
+                </button>
+              </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">E-mail</label>
-              <input
-                type="email"
-                value={signupEmail}
-                onChange={(e) => setSignupEmail(e.target.value)}
-                placeholder="seu@exemplo.com"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Senha</label>
-              <input
-                type="password"
-                value={signupPassword}
-                onChange={(e) => setSignupPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Confirmar senha</label>
-              <input
-                type="password"
-                value={signupConfirmPassword}
-                onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ backgroundColor: '#1a1a1a', borderColor: '#333333' }}
-                className="w-full border rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-            </div>
-          </div>
-
-          <div className="mb-6 flex items-start gap-3">
-            <input
-              type="checkbox"
-              id="terms"
-              checked={signupTerms}
-              onChange={(e) => setSignupTerms(e.target.checked)}
-              style={{ accentColor: '#ffffff' }}
-              className="mt-1 cursor-pointer"
-            />
-            <label htmlFor="terms" className="text-sm cursor-pointer" style={{ color: '#888888' }}>
-              Concordo com os <button onClick={() => {}} className="underline hover:opacity-80">Termos de uso</button> e <button onClick={() => {}} className="underline hover:opacity-80">Política de privacidade</button>
-            </label>
-          </div>
-
-          <button
-            onClick={handleSignup}
-            disabled={loading}
-            style={{ backgroundColor: '#ffffff' }}
-            className="w-full py-3 font-semibold rounded-lg text-black transition hover:opacity-90 disabled:opacity-60 mb-4"
-          >
-            {loading ? 'Criando conta...' : 'Criar conta grátis'}
-          </button>
-
-          <div className="text-center text-sm">
-            <span style={{ color: '#888888' }}>Já tem conta? </span>
             <button
-              onClick={() => {
-                setScreen('login')
-                setErrorMessage(null)
-              }}
-              className="font-semibold text-white hover:opacity-80 transition"
+              onClick={handleSignup}
+              disabled={loading}
+              className="w-full rounded-[1.5rem] bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
             >
-              Entrar →
+              {loading ? 'Criando conta...' : 'Criar conta grátis'}
             </button>
-          </div>
-        </div>
-      )}
 
-      {/* CONFIRMATION SCREEN */}
-      {screen === 'confirmation' && (
-        <div className="w-full max-w-md rounded-2xl p-8 border text-center" style={{ backgroundColor: '#111111', borderColor: '#333333' }}>
-          <div className="text-center mb-8">
-            <div className="text-3xl font-bold mb-2">Linkify</div>
-          </div>
+            <div className="mt-6 text-center text-sm text-zinc-500">
+              Já tem conta?{' '}
+              <button
+                onClick={() => {
+                  setScreen('login')
+                  setErrorMessage(null)
+                }}
+                className="font-semibold text-white hover:text-emerald-400"
+              >
+                Entrar →
+              </button>
+            </div>
+          </>
+        )}
 
-          <div className="space-y-6">
-            <svg className="w-16 h-16 mx-auto" style={{ color: '#ffffff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        {screen === 'confirmation' && (
+          <div className="space-y-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-emerald-500 bg-[#0b0f08] text-emerald-400">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12l2 2 4-4" />
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-3">Confira seu e-mail</h2>
-              <p style={{ color: '#888888' }} className="text-sm mb-4">
-                Enviamos um email de confirmação para <strong>{confirmationEmail}</strong>. Verifique sua caixa de entrada e clique no link para ativar sua conta.
+              <h2 className="text-3xl font-semibold text-white">Confira seu e-mail</h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-400">
+                Enviamos um email de confirmação para <strong className="text-white">{confirmationEmail}</strong>. Verifique sua caixa de entrada e clique no link para ativar sua conta.
               </p>
             </div>
 
@@ -345,14 +404,13 @@ export default function LoginPage() {
                 setSignupName('')
                 setSignupTerms(false)
               }}
-              style={{ backgroundColor: '#ffffff' }}
-              className="w-full py-3 font-semibold rounded-lg text-black transition hover:opacity-90"
+              className="w-full rounded-[1.5rem] bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400"
             >
               Voltar para login
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   )
 }
