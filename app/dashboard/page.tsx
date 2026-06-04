@@ -804,7 +804,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="mt-8 grid gap-4 lg:grid-cols-2">
                     {products.map((product) => (
-                      <div key={product.id} className="rounded-[2rem] border border-zinc-800 bg-[#0f0f0f] p-5 transition hover:border-white/20">
+                      <div key={product.id} className="rounded-[2rem] border border-[#222222] bg-[#0f0f0f] p-5 transition hover:border-white/20">
                         <div className="flex items-start gap-4">
                           <div className="h-20 w-20 overflow-hidden rounded-3xl bg-zinc-900">
                             {product.imagem_url ? (
@@ -834,7 +834,13 @@ export default function DashboardPage() {
                         </div>
                         <div className="mt-6 flex flex-wrap gap-3">
                           <button
-                            onClick={() => router.push(`/dashboard/novo-produto?product_id=${product.id}`)}
+                            onClick={() => window.open(`https://linkify.app.br/${product.username}/${product.slug}`, '_blank')}
+                            className="rounded-full border border-zinc-700 bg-transparent px-4 py-2 text-sm text-white hover:bg-white/5"
+                          >
+                            Ver página
+                          </button>
+                          <button
+                            onClick={() => router.push(`/dashboard/novo-produto?id=${product.id}`)}
                             className="rounded-full border border-zinc-700 bg-transparent px-4 py-2 text-sm text-white hover:bg-white/5"
                           >
                             Editar

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
@@ -11,13 +11,13 @@ interface ProductFormData {
   preco: string
   imagem_url: string
   tipo_entrega: 'arquivo' | 'link'
-  arquivo_url: string
+  arquivo_url: string | null
   link_externo: string
   slug: string
   ativo: boolean
 }
 
-const MAX_DESCRIPTION_LENGTH = 500
+const MAX_DESCRIPTION_LENGTH = 300
 const MIN_PRICE = 5.0
 const BASE_URL = 'https://linkify.app.br'
 
@@ -31,7 +31,7 @@ function slugify(value: string) {
 function NovoProdutoContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const productId = searchParams.get('product_id')
+  const productId = searchParams.get('id')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -43,21 +43,19 @@ function NovoProdutoContent() {
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const imageInputRef = useRef<HTMLInputElement | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [form, setForm] = useState<ProductFormData>({
     nome: '',
     descricao: '',
     preco: '',
     imagem_url: '',
-    tipo_entrega: 'arquivo',
+    tipo_entrega: 'link',
     arquivo_url: '',
     link_externo: '',
     slug: '',
     ativo: true,
   })
   const [imagePreview, setImagePreview] = useState<string>('')
-  const [fileName, setFileName] = useState<string>('')
 
   useEffect(() => {
     const initialize = async () => {
@@ -112,14 +110,13 @@ function NovoProdutoContent() {
           descricao: product.descricao ?? '',
           preco: String(Number(product.preco).toFixed(2)),
           imagem_url: product.imagem_url ?? '',
-          tipo_entrega: product.tipo_entrega || 'arquivo',
-          arquivo_url: product.arquivo_url ?? '',
+          tipo_entrega: 'link',
+          arquivo_url: '',
           link_externo: product.link_externo ?? '',
           slug: product.slug,
           ativo: product.ativo,
         })
         setImagePreview(product.imagem_url ?? '')
-        setFileName(product.arquivo_url ? product.arquivo_url.split('/').pop() ?? '' : '')
         setSlugTouched(true)
       }
 
@@ -155,7 +152,7 @@ function NovoProdutoContent() {
       const fileExt = file.name.split('.').pop() || 'jpg'
       const filePath = `${userId}-${Date.now()}.${fileExt}`
       
-      console.log('Iniciando upload de imagem:', { filePath, fileName: file.name, fileSize: file.size })
+      console.log('Iniciando upload de imagem:', { filePath, fileSize: file.size })
 
       const { error: uploadError } = await supabase.storage
         .from('produtos-imagens')
@@ -195,70 +192,6 @@ function NovoProdutoContent() {
     setSaving(false)
   }
 
-  const handleDigitalFile = async (file: File | null) => {
-    if (!file) return
-
-    // Check file size before anything else
-    if (file.size > 50 * 1024 * 1024) {
-      setErrorMessage('O arquivo precisa ter até 50MB.')
-      return
-    }
-
-    // Validate user session
-    const { data: userData, error: userError } = await supabase.auth.getUser()
-    if (userError || !userData?.user?.id) {
-      setErrorMessage('Sessão expirada. Faça login novamente antes de enviar um arquivo.')
-      return
-    }
-
-    setErrorMessage(null)
-    setSaving(true)
-
-    try {
-      // Extract file extension
-      const fileExt = file.name.split('.').pop() || 'bin'
-      const filePath = `${userId}-${Date.now()}.${fileExt}`
-
-      console.log('Iniciando upload de arquivo:', { filePath, fileName: file.name, fileSize: file.size })
-
-      const { error: uploadError } = await supabase.storage
-        .from('produtos-arquivos')
-        .upload(filePath, file, { upsert: true })
-
-      if (uploadError) {
-        console.error('Erro ao fazer upload do arquivo:', uploadError)
-        setErrorMessage(`Erro ao enviar o arquivo: ${uploadError.message || 'Tente novamente.'}`)
-        setSaving(false)
-        return
-      }
-
-      console.log('Upload bem sucedido. Gerando URL pública...')
-
-      const { data: publicData } = supabase.storage
-        .from('produtos-arquivos')
-        .getPublicUrl(filePath)
-
-      const publicUrl = (publicData as any)?.publicUrl ?? ''
-
-      if (!publicUrl) {
-        console.error('Falha ao gerar URL pública do arquivo')
-        setErrorMessage('Não foi possível gerar a URL do arquivo. Tente novamente.')
-        setSaving(false)
-        return
-      }
-
-      console.log('URL pública gerada:', publicUrl)
-      setForm((current) => ({ ...current, arquivo_url: publicUrl }))
-      setFileName(file.name)
-      setSuccessMessage('Arquivo carregado com sucesso.')
-    } catch (e) {
-      console.error('Exceção ao fazer upload de arquivo:', e)
-      setErrorMessage('Erro ao processar o arquivo. Tente novamente.')
-    }
-
-    setSaving(false)
-  }
-
   const validateForm = () => {
     const errors: Record<string, string> = {}
     const priceValue = Number(form.preco.replace(',', '.'))
@@ -272,21 +205,10 @@ function NovoProdutoContent() {
     if (Number.isNaN(priceValue) || priceValue < MIN_PRICE) {
       errors.preco = 'O preço mínimo é R$5,00'
     }
-    if (!form.imagem_url) {
-      errors.imagem_url = 'Escolha uma imagem de capa'
-    }
-    if (!form.tipo_entrega || !['arquivo', 'link'].includes(form.tipo_entrega)) {
-      errors.tipo_entrega = 'Selecione como vai entregar o produto'
-    }
-    if (form.tipo_entrega === 'arquivo' && !form.arquivo_url) {
-      errors.arquivo_url = 'Envie o arquivo digital'
-    }
-    if (form.tipo_entrega === 'link') {
-      if (!form.link_externo.trim()) {
-        errors.link_externo = 'Digite o link de entrega'
-      } else if (!/^https?:\/\//i.test(form.link_externo.trim())) {
-        errors.link_externo = 'O link deve começar com http ou https'
-      }
+    if (!form.link_externo.trim()) {
+      errors.link_externo = 'Digite o link do seu produto'
+    } else if (!/^https:\/\//i.test(form.link_externo.trim())) {
+      errors.link_externo = 'O link deve começar com https://'
     }
 
     return errors
@@ -333,9 +255,9 @@ function NovoProdutoContent() {
         descricao: form.descricao.trim(),
         preco: parsedPrice.toFixed(2),
         imagem_url: form.imagem_url,
-        tipo_entrega: form.tipo_entrega,
-        arquivo_url: form.tipo_entrega === 'arquivo' ? form.arquivo_url : null,
-        link_externo: form.tipo_entrega === 'link' ? form.link_externo : null,
+        tipo_entrega: 'link',
+        arquivo_url: null,
+        link_externo: form.link_externo.trim(),
         slug: form.slug.trim(),
         ativo: form.ativo,
       }
@@ -511,98 +433,22 @@ function NovoProdutoContent() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-[2rem] border border-emerald-500 bg-[#081008] p-4 text-sm text-emerald-300">
-                URL final:
-                <div className="mt-2 break-words text-emerald-400">{productUrl}</div>
-              </div>
-
-              <div className="mt-6 rounded-[2rem] border border-zinc-800 bg-[#0b0b0b] p-4">
-                <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Tipo de entrega</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {['arquivo', 'link'].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setForm((current) => ({ ...current, tipo_entrega: value as 'arquivo' | 'link' }))}
-                      className={`rounded-3xl border px-5 py-4 text-left transition ${form.tipo_entrega === value ? 'border-emerald-500 bg-emerald-500/10 text-white' : 'border-zinc-800 bg-[#090909] text-zinc-300 hover:border-white/20'}`}
-                    >
-                      <p className="font-semibold text-white">{value === 'arquivo' ? 'Arquivo digital' : 'Link externo'}</p>
-                      <p className="mt-2 text-sm text-zinc-400">
-                        {value === 'arquivo'
-                          ? 'Envie um PDF ou ZIP e o comprador recebe o arquivo automaticamente.'
-                          : 'Use um link de Google Drive, Notion, Dropbox ou similar em modo público.'}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-
-                {form.tipo_entrega === 'arquivo' ? (
-                  <div className="mt-5 space-y-3">
-                    <p className="text-sm font-semibold text-white">Upload do arquivo digital</p>
-                    {fileName ? (
-                      <div className="flex items-center justify-between rounded-3xl border border-emerald-500 bg-[#081008] px-4 py-3 text-sm text-emerald-300">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-300">✓</span>
-                          <div>
-                            <div className="font-semibold text-white truncate">{fileName}</div>
-                            <div className="text-xs text-zinc-500">PDF ou ZIP — até 50MB</div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setForm((current) => ({ ...current, arquivo_url: '' }))
-                            setFileName('')
-                          }}
-                          className="rounded-full bg-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/15"
-                          aria-label="Remover arquivo"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="group flex min-h-[120px] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-zinc-600 bg-[#050505] px-4 py-6 text-center text-white transition hover:border-emerald-500 hover:bg-[#0f0f0f]"
-                      >
-                        <svg className="h-8 w-8 text-zinc-400 transition group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 4h16v16H4z" />
-                          <path d="M4 8h16" />
-                          <path d="M8 12h8" />
-                        </svg>
-                        <div className="text-sm font-semibold">Clique para enviar seu arquivo</div>
-                        <div className="text-xs text-zinc-500">PDF ou ZIP — até 50MB</div>
-                      </button>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.zip"
-                      onChange={(event) => handleDigitalFile(event.target.files?.[0] ?? null)}
-                      className="hidden"
-                    />
-                    {hasSubmitted && validationErrors.arquivo_url ? (
-                      <p className="text-sm text-red-400">{validationErrors.arquivo_url}</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <label className="mt-5 block text-sm text-zinc-300">
-                    Link externo de entrega
-                    <input
-                      value={form.link_externo}
-                      onChange={(event) => setForm((current) => ({ ...current, link_externo: event.target.value }))}
-                      placeholder="https://drive.google.com/arquivo-publico"
-                      className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#050505] px-4 py-3 text-white outline-none transition focus:border-white/30"
-                    />
-                    {hasSubmitted && validationErrors.link_externo ? (
-                      <p className="mt-2 text-sm text-red-400">{validationErrors.link_externo}</p>
-                    ) : null}
-                  </label>
-                )}
-
+              <div className="mt-4 rounded-[2rem] border border-[#222222] bg-[#111111] p-4">
+                <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Link do seu produto</p>
+                <label className="mt-4 block text-sm text-zinc-300">
+                  Link do seu produto (Kiwify, Hotmart, WhatsApp ou qualquer link)
+                  <input
+                    value={form.link_externo}
+                    onChange={(event) => setForm((current) => ({ ...current, link_externo: event.target.value }))}
+                    placeholder="https://..."
+                    className="mt-3 w-full rounded-3xl border border-zinc-800 bg-[#050505] px-4 py-3 text-white outline-none transition focus:border-white/30"
+                  />
+                  {hasSubmitted && validationErrors.link_externo ? (
+                    <p className="mt-2 text-sm text-red-400">{validationErrors.link_externo}</p>
+                  ) : null}
+                </label>
                 <p className="mt-3 text-xs text-zinc-500">
-                  Se escolher link externo, verifique se ele está acessível em modo público para quem receber o produto.
+                  Cole o link de venda com https:// no começo para garantir o redirecionamento.
                 </p>
               </div>
             </div>
