@@ -88,17 +88,34 @@ export default function LoginPage() {
 
   const inp = "w-full rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-3 text-sm text-[#fafafa] placeholder-[#3f3f46] outline-none transition focus:border-[#7c3aed]"
 
+  const LogoMark = ({ size = 20 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
+      <rect x="3" y="2" width="9" height="14" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
+      <rect x="10" y="9" width="9" height="8" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
+    </svg>
+  )
+
   return (
-    <main className="min-h-screen bg-[#09090b] flex items-center justify-center py-12 px-4">
-      <div className="w-full max-w-md">
+    <main className="relative min-h-screen flex items-center justify-center py-12 px-4 overflow-hidden bg-[#09090b]">
+
+      {/* ── FUNDO ANIMADO ── */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="login-glow absolute -top-20 -left-20 w-72 h-72 rounded-full bg-[#7c3aed]/[0.08]" />
+        <div className="login-glow-2 absolute -bottom-16 -right-10 w-56 h-56 rounded-full bg-[#7c3aed]/[0.06]" />
+        <div className="login-drift1 absolute" style={{ width: 120, height: 120, top: '8%', left: '5%' }}><LogoMark size={120} /></div>
+        <div className="login-drift2 absolute" style={{ width: 80, height: 80, top: '60%', left: '3%' }}><LogoMark size={80} /></div>
+        <div className="login-drift3 absolute" style={{ width: 180, height: 180, top: '5%', right: '3%' }}><LogoMark size={180} /></div>
+        <div className="login-drift4 absolute" style={{ width: 60, height: 60, bottom: '10%', right: '8%' }}><LogoMark size={60} /></div>
+        <div className="login-drift5 absolute" style={{ width: 140, height: 140, bottom: '8%', left: '20%' }}><LogoMark size={140} /></div>
+      </div>
+
+      {/* ── CONTEÚDO ── */}
+      <div className="relative z-10 w-full max-w-md">
 
         {/* LOGO */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 justify-center mb-3">
-            <svg width="26" height="26" viewBox="0 0 22 22" fill="none">
-              <rect x="3" y="2" width="9" height="14" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
-              <rect x="10" y="9" width="9" height="8" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
-            </svg>
+            <LogoMark size={26} />
             <span className="text-xl font-medium text-[#fafafa]">Linkify</span>
           </Link>
           <p className="text-sm text-[#52525b]">O link da bio que transforma seguidores em clientes</p>
