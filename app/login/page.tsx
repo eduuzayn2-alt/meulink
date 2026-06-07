@@ -24,31 +24,18 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmationEmail, setConfirmationEmail] = useState('')
 
-  const EyeIcon = ({ open }: { open: boolean }) => open ? (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-5.14 0-9.4-3.28-11-7.5 1.08-2.73 2.93-4.9 5.18-6.23" />
-      <path d="M1 1l22 22" /><path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
-      <path d="M10.66 5.53A9.956 9.956 0 0 1 12 4.5c5.14 0 9.4 3.28 11 7.5a13.5 13.5 0 0 1-1.87 3.84" />
-    </svg>
-  ) : (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-
   const handleLogin = async () => {
     setErrorMessage(null)
     const now = Date.now()
-    if (lockoutUntil && now < lockoutUntil) { setErrorMessage('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.'); return }
+    if (lockoutUntil && now < lockoutUntil) { setErrorMessage('Muitas tentativas. Aguarde alguns minutos.'); return }
     if (!loginEmail || !loginPassword) { setErrorMessage('Preencha e-mail e senha'); return }
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword })
     setLoading(false)
     if (error) {
-      const nextAttempts = loginAttempts + 1
-      setLoginAttempts(nextAttempts)
-      if (nextAttempts >= 5) { setLockoutUntil(Date.now() + 3 * 60 * 1000); setErrorMessage('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.') }
+      const next = loginAttempts + 1
+      setLoginAttempts(next)
+      if (next >= 5) { setLockoutUntil(Date.now() + 3 * 60 * 1000); setErrorMessage('Muitas tentativas. Aguarde alguns minutos.') }
       else setErrorMessage(error.message)
       return
     }
@@ -61,16 +48,14 @@ export default function LoginPage() {
     if (!signupName || !signupEmail || !signupPassword || !signupConfirmPassword) { setErrorMessage('Preencha todos os campos'); return }
     if (signupPassword !== signupConfirmPassword) { setErrorMessage('As senhas não conferem'); return }
     if (signupPassword.length < 6) { setErrorMessage('Senha deve ter no mínimo 6 caracteres'); return }
-    if (!signupTerms) { setErrorMessage('Você precisa aceitar os termos para criar uma conta'); return }
+    if (!signupTerms) { setErrorMessage('Aceite os termos para criar uma conta'); return }
     setLoading(true)
     const { data, error } = await supabase.auth.signUp({ email: signupEmail, password: signupPassword, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })
     setLoading(false)
     if (error) { setErrorMessage(error.message); return }
     if (data.user?.id) {
-      const adminList = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
-      const isAdmin = adminList.includes(signupEmail.toLowerCase())
-      const { error: profileError } = await supabase.from('profiles').insert([{ user_id: data.user.id, nome: signupName, username: signupEmail.split('@')[0] + Date.now(), is_admin: isAdmin || false }])
-      if (profileError) console.error('Erro ao criar perfil:', profileError)
+      const adminList = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      await supabase.from('profiles').insert([{ user_id: data.user.id, nome: signupName, username: signupEmail.split('@')[0] + Date.now(), is_admin: adminList.includes(signupEmail.toLowerCase()) }])
     }
     setConfirmationEmail(signupEmail)
     setScreen('confirmation')
@@ -86,153 +71,136 @@ export default function LoginPage() {
     alert('Enviamos um link de recuperação para seu e-mail')
   }
 
-  const inp = "w-full rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-3 text-sm text-[#fafafa] placeholder-[#3f3f46] outline-none transition focus:border-[#7c3aed]"
-
-  const LogoMark = ({ size = 20 }: { size?: number }) => (
-    <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
-      <rect x="3" y="2" width="9" height="14" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
-      <rect x="10" y="9" width="9" height="8" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
+  const EyeOpen = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-5.14 0-9.4-3.28-11-7.5 1.08-2.73 2.93-4.9 5.18-6.23"/>
+      <path d="M1 1l22 22"/><path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"/>
+      <path d="M10.66 5.53A9.956 9.956 0 0 1 12 4.5c5.14 0 9.4 3.28 11 7.5a13.5 13.5 0 0 1-1.87 3.84"/>
+    </svg>
+  )
+  const EyeClosed = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
     </svg>
   )
 
+  const s = {
+    page: { minHeight: '100vh', background: '#09090b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' } as React.CSSProperties,
+    wrap: { width: '100%', maxWidth: 440 } as React.CSSProperties,
+    logoRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6, textDecoration: 'none' } as React.CSSProperties,
+    logoText: { fontSize: 20, fontWeight: 500, color: '#fafafa' } as React.CSSProperties,
+    sub: { fontSize: 13, color: '#52525b', textAlign: 'center' as const, marginBottom: 28 },
+    card: { background: '#161618', border: '1px solid #2a2a2e', borderRadius: 20, padding: '32px 28px' } as React.CSSProperties,
+    gradLine: { height: 1, background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.6), transparent)', borderRadius: 999, marginBottom: 24 } as React.CSSProperties,
+    title: { fontSize: 17, fontWeight: 500, color: '#fafafa', textAlign: 'center' as const, marginBottom: 20 },
+    label: { display: 'block', fontSize: 11, color: '#71717a', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 6 },
+    inp: { width: '100%', background: '#1c1c1f', border: '1px solid #2a2a2e', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#fafafa', outline: 'none', boxSizing: 'border-box' as const },
+    inpPass: { width: '100%', background: '#1c1c1f', border: '1px solid #2a2a2e', borderRadius: 10, padding: '10px 44px 10px 14px', fontSize: 13, color: '#fafafa', outline: 'none', boxSizing: 'border-box' as const },
+    passWrap: { position: 'relative' as const },
+    eyeBtn: { position: 'absolute' as const, right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#52525b', display: 'flex', alignItems: 'center' },
+    btnPrimary: { width: '100%', background: '#7c3aed', border: 'none', borderRadius: 10, padding: '11px', fontSize: 13, fontWeight: 500, color: '#fff', cursor: 'pointer', marginTop: 4 } as React.CSSProperties,
+    btnGhost: { width: '100%', background: 'transparent', border: '1px solid #2a2a2e', borderRadius: 10, padding: '10px', fontSize: 13, color: '#71717a', cursor: 'pointer', marginTop: 8 } as React.CSSProperties,
+    fieldWrap: { marginBottom: 14 } as React.CSSProperties,
+    error: { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#f87171', marginBottom: 16 } as React.CSSProperties,
+    footer: { fontSize: 12, color: '#52525b', textAlign: 'center' as const, marginTop: 18 },
+    link: { color: '#7c3aed', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 },
+    copy: { fontSize: 11, color: '#27272a', textAlign: 'center' as const, marginTop: 20 },
+  }
+
   return (
-    <main className="relative min-h-screen flex items-center justify-center py-12 px-4 overflow-hidden bg-[#09090b]">
+    <main style={s.page}>
+      <div style={s.wrap}>
+        <Link href="/" style={s.logoRow}>
+          <svg width="24" height="24" viewBox="0 0 22 22" fill="none">
+            <rect x="3" y="2" width="9" height="14" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
+            <rect x="10" y="9" width="9" height="8" rx="2" transform="skewX(-8)" fill="#7c3aed"/>
+          </svg>
+          <span style={s.logoText}>Linkify</span>
+        </Link>
+        <p style={s.sub}>O link da bio que transforma seguidores em clientes</p>
 
-      {/* ── FUNDO ANIMADO ── */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="login-glow absolute -top-20 -left-20 w-72 h-72 rounded-full bg-[#7c3aed]/[0.08]" />
-        <div className="login-glow-2 absolute -bottom-16 -right-10 w-56 h-56 rounded-full bg-[#7c3aed]/[0.06]" />
-        <div className="login-drift1 absolute" style={{ width: 120, height: 120, top: '8%', left: '5%' }}><LogoMark size={120} /></div>
-        <div className="login-drift2 absolute" style={{ width: 80, height: 80, top: '60%', left: '3%' }}><LogoMark size={80} /></div>
-        <div className="login-drift3 absolute" style={{ width: 180, height: 180, top: '5%', right: '3%' }}><LogoMark size={180} /></div>
-        <div className="login-drift4 absolute" style={{ width: 60, height: 60, bottom: '10%', right: '8%' }}><LogoMark size={60} /></div>
-        <div className="login-drift5 absolute" style={{ width: 140, height: 140, bottom: '8%', left: '20%' }}><LogoMark size={140} /></div>
-      </div>
+        <div style={s.card}>
+          <div style={s.gradLine} />
 
-      {/* ── CONTEÚDO ── */}
-      <div className="relative z-10 w-full max-w-md">
-
-        {/* LOGO */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 justify-center mb-3">
-            <LogoMark size={26} />
-            <span className="text-xl font-medium text-[#fafafa]">Linkify</span>
-          </Link>
-          <p className="text-sm text-[#52525b]">O link da bio que transforma seguidores em clientes</p>
-        </div>
-
-        {/* CARD */}
-        <div className="rounded-2xl border border-[#27272a] bg-[#111113] p-8">
-          <div className="h-px w-full rounded-full mb-6" style={{ background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.5), transparent)' }} />
-
-          {/* LOGIN */}
           {screen === 'login' && (
             <>
-              <h2 className="text-lg font-medium text-[#fafafa] text-center mb-6">Entrar na sua conta</h2>
-              {errorMessage && <div className="mb-5 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-400">{errorMessage}</div>}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">E-mail</label>
-                  <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} placeholder="seu@exemplo.com" className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">Senha</label>
-                  <div className="relative">
-                    <input type={showLoginPassword ? 'text' : 'password'} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} placeholder="••••••••" className={`${inp} pr-12`} />
-                    <button type="button" onClick={() => setShowLoginPassword(c => !c)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3f3f46] hover:text-[#fafafa] transition">
-                      <EyeIcon open={showLoginPassword} />
-                    </button>
-                  </div>
-                </div>
-                <button onClick={handleLogin} disabled={loading} className="w-full rounded-xl bg-[#7c3aed] px-4 py-3 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50 transition mt-2">
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </button>
-                <button type="button" onClick={handleForgotPassword} disabled={loading} className="w-full rounded-xl border border-[#27272a] bg-transparent px-4 py-3 text-sm text-[#71717a] hover:border-[#7c3aed]/50 hover:text-[#fafafa] disabled:opacity-50 transition">
-                  Esqueci minha senha
-                </button>
+              <p style={s.title}>Entrar na sua conta</p>
+              {errorMessage && <div style={s.error}>{errorMessage}</div>}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>E-mail</label>
+                <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleLogin()} placeholder="seu@exemplo.com" style={s.inp} />
               </div>
-              <p className="mt-6 text-center text-xs text-[#52525b]">
-                Não tem conta?{' '}
-                <button onClick={() => { setScreen('signup'); setErrorMessage(null) }} className="font-medium text-[#7c3aed] hover:text-[#a78bfa] transition">Criar conta grátis →</button>
-              </p>
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Senha</label>
+                <div style={s.passWrap}>
+                  <input type={showLoginPassword ? 'text' : 'password'} value={loginPassword} onChange={e => setLoginPassword(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••" style={s.inpPass} />
+                  <button type="button" onClick={() => setShowLoginPassword(c => !c)} style={s.eyeBtn}>{showLoginPassword ? <EyeOpen /> : <EyeClosed />}</button>
+                </div>
+              </div>
+              <button onClick={handleLogin} disabled={loading} style={s.btnPrimary}>{loading ? 'Entrando...' : 'Entrar'}</button>
+              <button type="button" onClick={handleForgotPassword} disabled={loading} style={s.btnGhost}>Esqueci minha senha</button>
+              <p style={s.footer}>Não tem conta? <button onClick={() => { setScreen('signup'); setErrorMessage(null) }} style={s.link}>Criar conta grátis →</button></p>
             </>
           )}
 
-          {/* SIGNUP */}
           {screen === 'signup' && (
             <>
-              <h2 className="text-lg font-medium text-[#fafafa] text-center mb-6">Criar sua conta grátis</h2>
-              {errorMessage && <div className="mb-5 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-400">{errorMessage}</div>}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">Nome completo</label>
-                  <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Seu nome" className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">E-mail</label>
-                  <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="seu@exemplo.com" className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">Senha</label>
-                  <div className="relative">
-                    <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="••••••••" className={`${inp} pr-12`} />
-                    <button type="button" onClick={() => setShowSignupPassword(c => !c)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3f3f46] hover:text-[#fafafa] transition">
-                      <EyeIcon open={showSignupPassword} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-[#71717a] mb-1.5 uppercase tracking-wider">Confirmar senha</label>
-                  <div className="relative">
-                    <input type={showSignupConfirmPassword ? 'text' : 'password'} value={signupConfirmPassword} onChange={(e) => setSignupConfirmPassword(e.target.value)} placeholder="••••••••" className={`${inp} pr-12`} />
-                    <button type="button" onClick={() => setShowSignupConfirmPassword(c => !c)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3f3f46] hover:text-[#fafafa] transition">
-                      <EyeIcon open={showSignupConfirmPassword} />
-                    </button>
-                  </div>
+              <p style={s.title}>Criar sua conta grátis</p>
+              {errorMessage && <div style={s.error}>{errorMessage}</div>}
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Nome completo</label>
+                <input type="text" value={signupName} onChange={e => setSignupName(e.target.value)} placeholder="Seu nome" style={s.inp} />
+              </div>
+              <div style={s.fieldWrap}>
+                <label style={s.label}>E-mail</label>
+                <input type="email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} placeholder="seu@exemplo.com" style={s.inp} />
+              </div>
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Senha</label>
+                <div style={s.passWrap}>
+                  <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword} onChange={e => setSignupPassword(e.target.value)} placeholder="••••••••" style={s.inpPass} />
+                  <button type="button" onClick={() => setShowSignupPassword(c => !c)} style={s.eyeBtn}>{showSignupPassword ? <EyeOpen /> : <EyeClosed />}</button>
                 </div>
               </div>
-              <div className="mt-4 mb-5 flex items-start gap-3">
-                <input type="checkbox" id="terms" checked={signupTerms} onChange={(e) => setSignupTerms(e.target.checked)} className="mt-1 h-4 w-4 rounded border-[#27272a] bg-[#18181b] accent-[#7c3aed]" />
-                <label htmlFor="terms" className="text-xs leading-5 text-[#52525b]">
+              <div style={s.fieldWrap}>
+                <label style={s.label}>Confirmar senha</label>
+                <div style={s.passWrap}>
+                  <input type={showSignupConfirmPassword ? 'text' : 'password'} value={signupConfirmPassword} onChange={e => setSignupConfirmPassword(e.target.value)} placeholder="••••••••" style={s.inpPass} />
+                  <button type="button" onClick={() => setShowSignupConfirmPassword(c => !c)} style={s.eyeBtn}>{showSignupConfirmPassword ? <EyeOpen /> : <EyeClosed />}</button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, marginTop: 4 }}>
+                <input type="checkbox" id="terms" checked={signupTerms} onChange={e => setSignupTerms(e.target.checked)} style={{ marginTop: 2, accentColor: '#7c3aed', flexShrink: 0 }} />
+                <label htmlFor="terms" style={{ fontSize: 12, color: '#52525b', lineHeight: 1.5 }}>
                   Li e concordo com os{' '}
-                  <Link href="/termos" target="_blank" rel="noreferrer" className="text-[#7c3aed] hover:text-[#a78bfa]">Termos de Uso</Link>
+                  <Link href="/termos" target="_blank" rel="noreferrer" style={{ color: '#7c3aed' }}>Termos de Uso</Link>
                   {' '}e{' '}
-                  <Link href="/privacidade" target="_blank" rel="noreferrer" className="text-[#7c3aed] hover:text-[#a78bfa]">Política de Privacidade</Link>
+                  <Link href="/privacidade" target="_blank" rel="noreferrer" style={{ color: '#7c3aed' }}>Política de Privacidade</Link>
                 </label>
               </div>
-              <button onClick={handleSignup} disabled={loading} className="w-full rounded-xl bg-[#7c3aed] px-4 py-3 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50 transition">
-                {loading ? 'Criando conta...' : 'Criar conta grátis'}
-              </button>
-              <p className="mt-6 text-center text-xs text-[#52525b]">
-                Já tem conta?{' '}
-                <button onClick={() => { setScreen('login'); setErrorMessage(null) }} className="font-medium text-[#7c3aed] hover:text-[#a78bfa] transition">Entrar →</button>
-              </p>
+              <button onClick={handleSignup} disabled={loading} style={s.btnPrimary}>{loading ? 'Criando conta...' : 'Criar conta grátis'}</button>
+              <p style={s.footer}>Já tem conta? <button onClick={() => { setScreen('login'); setErrorMessage(null) }} style={s.link}>Entrar →</button></p>
             </>
           )}
 
-          {/* CONFIRMAÇÃO */}
           {screen === 'confirmation' && (
-            <div className="space-y-6 text-center py-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#7c3aed]/40 bg-[#1a1030]">
-                <svg className="h-8 w-8 text-[#7c3aed]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 12l2 2 4-4" /><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
               </div>
-              <div>
-                <h2 className="text-lg font-medium text-[#fafafa]">Confira seu e-mail</h2>
-                <p className="mt-3 text-sm leading-6 text-[#71717a]">
-                  Enviamos um e-mail para <strong className="text-[#fafafa]">{confirmationEmail}</strong>. Clique no link para ativar sua conta.
-                </p>
-              </div>
-              <button onClick={() => { setScreen('login'); setSignupEmail(''); setSignupPassword(''); setSignupConfirmPassword(''); setSignupName(''); setSignupTerms(false) }}
-                className="w-full rounded-xl bg-[#7c3aed] px-4 py-3 text-sm font-medium text-white hover:bg-[#6d28d9] transition">
+              <p style={{ fontSize: 17, fontWeight: 500, color: '#fafafa', marginBottom: 10 }}>Confira seu e-mail</p>
+              <p style={{ fontSize: 13, color: '#71717a', lineHeight: 1.6, marginBottom: 24 }}>
+                Enviamos um e-mail para <strong style={{ color: '#fafafa' }}>{confirmationEmail}</strong>. Clique no link para ativar sua conta.
+              </p>
+              <button onClick={() => { setScreen('login'); setSignupEmail(''); setSignupPassword(''); setSignupConfirmPassword(''); setSignupName(''); setSignupTerms(false) }} style={s.btnPrimary}>
                 Voltar para login
               </button>
             </div>
           )}
         </div>
-
-        <p className="text-center text-xs text-[#27272a] mt-6">© 2026 Linkify — feito para criadores brasileiros</p>
+        <p style={s.copy}>© 2026 Linkify — feito para criadores brasileiros</p>
       </div>
     </main>
   )
