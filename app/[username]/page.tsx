@@ -1,5 +1,8 @@
 import Image from 'next/image'
 import { createClient } from '@supabase/supabase-js'
+import TrackableLink from './TrackableLink'
+
+export const dynamic = 'force-dynamic'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,11 +12,7 @@ const supabase = createClient(
 const renderLinkIcon = (link: any) => {
   if (link.icon_url) {
     return (
-      <img
-        src={link.icon_url}
-        alt={link.icon_name || link.titulo}
-        className="h-10 w-10 rounded-2xl object-cover"
-      />
+      <img src={link.icon_url} alt={link.icon_name || link.titulo} className="h-10 w-10 rounded-2xl object-cover" />
     )
   }
 
@@ -24,17 +23,7 @@ const renderLinkIcon = (link: any) => {
   const isTikTok = title.includes('tiktok')
   const isTelegram = title.includes('telegram')
 
-  const iconColor = isWhatsApp
-    ? '#25D366'
-    : isInstagram
-    ? '#E1306C'
-    : isYouTube
-    ? '#FF0000'
-    : isTikTok
-    ? '#FFFFFF'
-    : isTelegram
-    ? '#0088CC'
-    : '#888888'
+  const iconColor = isWhatsApp ? '#25D366' : isInstagram ? '#E1306C' : isYouTube ? '#FF0000' : isTikTok ? '#FFFFFF' : isTelegram ? '#0088CC' : '#888888'
 
   const iconSvg = isWhatsApp ? (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -49,7 +38,7 @@ const renderLinkIcon = (link: any) => {
     </svg>
   ) : isYouTube ? (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-      <path d="M22 7.2a2.4 2.4 0 00-1.66-1.64C18.72 5 12 5 12 5s-6.72 0-8.34.56A2.4 2.4 0 002. 7.2 24 24 0 002 11.4v1.2a24 24 0 00.66 4.2 2.4 2.4 0 001.66 1.64C5.28 19 12 19 12 19s6.72 0 8.34-.56a2.4 2.4 0 001.66-1.64A24 24 0 0022 12.6v-1.2A24 24 0 0022 7.2z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M22 7.2a2.4 2.4 0 00-1.66-1.64C18.72 5 12 5 12 5s-6.72 0-8.34.56A2.4 2.4 0 002 7.2 24 24 0 002 11.4v1.2a24 24 0 00.66 4.2 2.4 2.4 0 001.66 1.64C5.28 19 12 19 12 19s6.72 0 8.34-.56a2.4 2.4 0 001.66-1.64A24 24 0 0022 12.6v-1.2A24 24 0 0022 7.2z" stroke="currentColor" strokeWidth="1.5" />
       <path d="M10 15.5l5-3.5-5-3.5v7z" fill="currentColor" />
     </svg>
   ) : isTikTok ? (
@@ -87,60 +76,65 @@ export default async function Page({ params }: { params: { username: string } })
 
   if (!profile) {
     return (
-      <main style={{minHeight:'100vh',background:'#000',display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div style={{textAlign:'center',padding:'2rem',background:'#111',borderRadius:'1rem'}}>
-          <h1 style={{color:'#fff',fontSize:'1.5rem',marginBottom:'0.5rem'}}>Perfil nao encontrado</h1>
-          <p style={{color:'#888'}}>username: {username}</p>
+      <main style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', background: '#111', borderRadius: '1rem' }}>
+          <h1 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Perfil não encontrado</h1>
+          <p style={{ color: '#888' }}>username: {username}</p>
         </div>
       </main>
     )
   }
 
-  const { data: links } = await supabase.from('links').select('*').eq('user_id', profile.user_id)
+  const { data: links } = await supabase
+    .from('links')
+    .select('*')
+    .eq('user_id', profile.user_id)
+
+  // ── REGISTRA VISITA (fire and forget) ──
+  void supabase.from('analytics_events').insert({
+    user_id: profile.user_id,
+    event_type: 'page_view',
+  })
 
   return (
-    <main style={{minHeight:'100vh',background:'#000',color:'#fff',display:'flex',flexDirection:'column',alignItems:'center',padding:'4rem 1rem'}}>
-      <div style={{width:'100%',maxWidth:'28rem'}}>
+    <main style={{ minHeight: '100vh', background: '#000', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem 1rem' }}>
+      <div style={{ width: '100%', maxWidth: '28rem' }}>
+
         {profile.cover_url ? (
-          <div style={{width:'100%',height:'240px',marginBottom:'1.5rem',overflow:'hidden',borderRadius:'1.5rem',background:'#111'}}>
-            <img
-              src={profile.cover_url}
-              alt="Imagem de capa"
-              style={{width:'100%',height:'100%',objectFit:'cover'}}
-            />
+          <div style={{ width: '100%', height: '240px', marginBottom: '1.5rem', overflow: 'hidden', borderRadius: '1.5rem', background: '#111' }}>
+            <img src={profile.cover_url} alt="Imagem de capa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : null}
+
         {profile.foto_url ? (
-          <div style={{display:'flex',justifyContent:'center',marginBottom:'1.5rem'}}>
-            <Image
-              src={profile.foto_url}
-              alt={profile.nome ?? 'Foto de perfil'}
-              width={120}
-              height={120}
-              className="rounded-full"
-              unoptimized={true}
-            />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <Image src={profile.foto_url} alt={profile.nome ?? 'Foto de perfil'} width={120} height={120} className="rounded-full" unoptimized={true} />
           </div>
         ) : null}
-        <h1 style={{fontSize:'1.5rem',fontWeight:'bold',textAlign:'center',marginBottom:'0.25rem'}}>{profile.nome}</h1>
-        <p style={{color:'#888',textAlign:'center',marginBottom:'2rem'}}>{profile.bio}</p>
-        <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '0.25rem' }}>{profile.nome}</h1>
+        <p style={{ color: '#888', textAlign: 'center', marginBottom: '2rem' }}>{profile.bio}</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {links?.map((link: any) => (
-            <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={{background:'#111',border:'1px solid #333',borderRadius:'0.75rem',padding:'1rem',display:'flex',alignItems:'center',gap:'0.75rem',color:'#fff',textDecoration:'none'}}>
-              <div style={{flexShrink:0}}>{renderLinkIcon(link)}</div>
+            <TrackableLink
+              key={link.id}
+              href={link.url}
+              userId={profile.user_id}
+              linkId={link.id}
+              linkTitle={link.titulo}
+              style={{ background: '#111', border: '1px solid #333', borderRadius: '0.75rem', padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fff', textDecoration: 'none' }}
+            >
+              <div style={{ flexShrink: 0 }}>{renderLinkIcon(link)}</div>
               <div>
-                <div style={{fontWeight:600}}>{link.titulo}</div>
+                <div style={{ fontWeight: 600 }}>{link.titulo}</div>
               </div>
-            </a>
+            </TrackableLink>
           ))}
         </div>
-        <footer style={{textAlign:'center',color:'#888',fontSize:'0.75rem',marginTop:'3rem'}}>
-          <a
-            href="https://linkify.app.br/login"
-            target="_blank"
-            rel="noreferrer"
-            style={{color:'#888',textDecoration:'none'}}
-          >
+
+        <footer style={{ textAlign: 'center', color: '#888', fontSize: '0.75rem', marginTop: '3rem' }}>
+          <a href="https://linkify.app.br/login" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'none' }}>
             Crie seu Linkify →
           </a>
         </footer>
