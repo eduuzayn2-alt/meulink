@@ -1,13 +1,59 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes drift1 {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0.06; }
+  50% { transform: translateY(-30px) translateX(10px) rotate(8deg); opacity: 0.12; }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0.04; }
+  50% { transform: translateY(20px) translateX(-15px) rotate(-6deg); opacity: 0.09; }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0.07; }
+  50% { transform: translateY(-20px) translateX(8px) rotate(5deg); opacity: 0.13; }
+}
+@keyframes drift4 {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.03; }
+  50% { transform: translateY(25px) rotate(-10deg); opacity: 0.07; }
+}
+@keyframes drift5 {
+  0%, 100% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0.05; }
+  50% { transform: translateY(-15px) translateX(-10px) rotate(12deg); opacity: 0.10; }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.22; }
+}
+
+.login-drift1 { animation: drift1 8s ease-in-out infinite; }
+.login-drift2 { animation: drift2 11s ease-in-out infinite; }
+.login-drift3 { animation: drift3 9s ease-in-out infinite; }
+.login-drift4 { animation: drift4 13s ease-in-out infinite; }
+.login-drift5 { animation: drift5 10s ease-in-out infinite; }
+.login-glow { animation: glow-pulse 6s ease-in-out infinite; }
+.login-glow-2 { animation: glow-pulse 8s ease-in-out infinite 2s; }
