@@ -83,6 +83,13 @@ export default function DashboardPage() {
   const [upgradeLoading, setUpgradeLoading] = useState(false)
   const [products, setProducts] = useState<ProductItem[]>([])
 
+  // ── ANALYTICS STATE ──
+  const [analytics, setAnalytics] = useState<{
+    visitors: number | null
+    clicks: number | null
+    topLink: string | null
+  }>({ visitors: null, clicks: null, topLink: null })
+
   const hasProfile = Boolean(username.trim())
   const previewLinks = useMemo(() => links.slice().reverse(), [links])
 
@@ -128,15 +135,18 @@ export default function DashboardPage() {
       if (error || !data.session?.user) { router.push('/login'); return }
       const ownerId = data.session.user.id
       setUserId(ownerId)
+
       const [{ data: profileData, error: profileError }, { data: linkData, error: linkError }, { data: productData, error: productError }] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', ownerId).maybeSingle(),
         supabase.from('links').select('*').eq('user_id', ownerId).order('criado_em', { ascending: false }),
         supabase.from('produtos').select('*').eq('user_id', ownerId).order('criado_em', { ascending: false }),
       ])
+
       if (profileError || linkError || productError) setErrorMessage(getFriendlyErrorMessage(profileError ?? linkError ?? productError, 'Não foi possível carregar seus dados.'))
       if (profileData) { setProfile(profileData); setNome(profileData.nome ?? ''); setBio(profileData.bio ?? ''); setFotoUrl(profileData.foto_url ?? ''); setCoverUrl(profileData.cover_url ?? ''); setUsername(profileData.username ?? '') }
       if (linkError) setErrorMessage(linkError.message); else setLinks(linkData ?? [])
       if (productError) setErrorMessage(getFriendlyErrorMessage(productError, 'Não foi possível carregar seus produtos.')); else setProducts(productData ?? [])
+
       try {
         const token = data.session.access_token
         if (token) {
@@ -144,6 +154,30 @@ export default function DashboardPage() {
           if (subsRes.ok) { const subs = await subsRes.json(); setSubscriptions(subs ?? []) }
         }
       } catch (e) {}
+
+      // ── BUSCA ANALYTICS ──
+      try {
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        const since = thirtyDaysAgo.toISOString()
+
+        const [{ count: visitorCount }, { count: clickCount }, { data: clickData }] = await Promise.all([
+          supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('user_id', ownerId).eq('event_type', 'page_view').gte('criado_em', since),
+          supabase.from('analytics_events').select('*', { count: 'exact', head: true }).eq('user_id', ownerId).eq('event_type', 'link_click').gte('criado_em', since),
+          supabase.from('analytics_events').select('link_title').eq('user_id', ownerId).eq('event_type', 'link_click').gte('criado_em', since),
+        ])
+
+        const linkCounts: Record<string, number> = {}
+        clickData?.forEach((e: any) => {
+          if (e.link_title) linkCounts[e.link_title] = (linkCounts[e.link_title] || 0) + 1
+        })
+        const topLink = Object.entries(linkCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+
+        setAnalytics({ visitors: visitorCount ?? 0, clicks: clickCount ?? 0, topLink })
+      } catch (e) {
+        // ignora erros de analytics
+      }
+
       setFetching(false)
     }
     initialize()
@@ -279,6 +313,8 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => { try { await supabase.auth.signOut() } finally { router.push('/login') } }
 
+  const formatNum = (n: number | null) => n === null ? '—' : n.toLocaleString('pt-BR')
+
   if (fetching) {
     return (
       <main className="min-h-screen bg-[#09090b] flex items-center justify-center px-4">
@@ -323,18 +359,18 @@ export default function DashboardPage() {
         <div className="mx-auto max-w-7xl grid grid-cols-3 divide-x divide-[#1c1c1e]">
           <div className="px-4 sm:px-6 py-4">
             <p className="text-[10px] uppercase tracking-wider text-[#52525b] mb-1">Visitantes</p>
-            <p className="text-xl font-medium text-[#fafafa]">—</p>
+            <p className="text-xl font-medium text-[#fafafa]">{formatNum(analytics.visitors)}</p>
             <p className="text-[11px] text-[#52525b] mt-0.5">últimos 30 dias</p>
           </div>
           <div className="px-4 sm:px-6 py-4">
             <p className="text-[10px] uppercase tracking-wider text-[#52525b] mb-1">Cliques</p>
-            <p className="text-xl font-medium text-[#fafafa]">—</p>
+            <p className="text-xl font-medium text-[#fafafa]">{formatNum(analytics.clicks)}</p>
             <p className="text-[11px] text-[#52525b] mt-0.5">últimos 30 dias</p>
           </div>
           <div className="px-4 sm:px-6 py-4">
             <p className="text-[10px] uppercase tracking-wider text-[#52525b] mb-1">Link mais clicado</p>
-            <p className="text-base font-medium text-[#fafafa] mt-1">—</p>
-            <p className="text-[11px] text-[#52525b] mt-0.5">sem dados ainda</p>
+            <p className="text-base font-medium text-[#fafafa] mt-1 truncate">{analytics.topLink ?? '—'}</p>
+            <p className="text-[11px] text-[#52525b] mt-0.5">{analytics.topLink ? 'últimos 30 dias' : 'sem dados ainda'}</p>
           </div>
         </div>
       </div>
@@ -354,8 +390,6 @@ export default function DashboardPage() {
 
       {/* ── MAIN GRID ── */}
       <div className="mx-auto max-w-7xl xl:grid xl:grid-cols-[1fr_360px]">
-
-        {/* MAIN CONTENT */}
         <div className="border-r border-[#1c1c1e] divide-y divide-[#1c1c1e]">
 
           {/* LINKS SECTION */}
@@ -369,7 +403,6 @@ export default function DashboardPage() {
                 <button onClick={handleCancelEdit} className="rounded-full border border-[#27272a] px-3 py-1.5 text-xs text-[#71717a] hover:text-[#fafafa] transition">Cancelar</button>
               )}
             </div>
-
             <div className="grid gap-2 sm:grid-cols-2 mb-2">
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título do link" className="rounded-xl border border-[#27272a] bg-[#111113] px-4 py-2.5 text-sm text-[#fafafa] placeholder-[#3f3f46] outline-none focus:border-[#7c3aed] transition" />
               <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="rounded-xl border border-[#27272a] bg-[#111113] px-4 py-2.5 text-sm text-[#fafafa] placeholder-[#3f3f46] outline-none focus:border-[#7c3aed] transition" />
@@ -383,11 +416,8 @@ export default function DashboardPage() {
             <button onClick={handleAddLink} disabled={loading} className="rounded-full bg-[#7c3aed] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50 transition">
               {loading ? (editingLinkId ? 'Salvando...' : 'Adicionando...') : (editingLinkId ? 'Salvar alterações' : '+ Adicionar link')}
             </button>
-
             {links.length === 0 ? (
-              <div className="mt-5 rounded-xl border border-dashed border-[#27272a] p-8 text-center text-sm text-[#3f3f46]">
-                Nenhum link ainda. Adicione o primeiro acima.
-              </div>
+              <div className="mt-5 rounded-xl border border-dashed border-[#27272a] p-8 text-center text-sm text-[#3f3f46]">Nenhum link ainda. Adicione o primeiro acima.</div>
             ) : (
               <div className="mt-4 space-y-2">
                 {links.map((link, index) => (
@@ -406,17 +436,13 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-
             {profile?.plan !== 'pro' && (
               <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-950/20 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-sm font-medium text-amber-400 mb-2">Desbloqueie o Linkify Pro</h3>
                     <ul className="space-y-1 text-xs text-[#71717a]">
-                      <li>• Até 10 links</li>
-                      <li>• Loja com Pix integrada</li>
-                      <li>• Sem marca d'água</li>
-                      <li>• Analytics avançado</li>
+                      <li>• Até 10 links</li><li>• Loja com Pix integrada</li><li>• Sem marca d'água</li><li>• Analytics avançado</li>
                     </ul>
                   </div>
                   <div className="flex-shrink-0 text-right">
@@ -436,12 +462,9 @@ export default function DashboardPage() {
                 <h2 className="text-base font-medium text-[#fafafa]">Nome, bio e foto da sua página</h2>
               </div>
               {hasProfile && (
-                <a href={`https://linkify.app.br/${username}`} target="_blank" rel="noreferrer" className="rounded-full border border-[#27272a] px-3 py-1.5 text-xs text-[#71717a] hover:text-[#fafafa] hover:border-[#7c3aed]/50 transition">
-                  Ver página ↗
-                </a>
+                <a href={`https://linkify.app.br/${username}`} target="_blank" rel="noreferrer" className="rounded-full border border-[#27272a] px-3 py-1.5 text-xs text-[#71717a] hover:text-[#fafafa] hover:border-[#7c3aed]/50 transition">Ver página ↗</a>
               )}
             </div>
-
             <div className="grid gap-3 sm:grid-cols-2 mb-3">
               <div>
                 <label className="block text-xs text-[#52525b] mb-1.5">Nome</label>
@@ -479,9 +502,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] uppercase tracking-wider text-[#7c3aed] mb-1">Loja</p>
                 <h2 className="text-base font-medium text-[#fafafa] mb-2">Venda seus produtos com Pix</h2>
                 <p className="text-sm text-[#52525b] mb-4">Crie e-books, mentorias e cursos. Disponível no plano Pro.</p>
-                <button onClick={() => startCheckout('store')} className="rounded-full bg-amber-500 px-5 py-2.5 text-sm font-medium text-black hover:bg-amber-400 transition">
-                  Desbloquear loja — Pro R$9,90/mês
-                </button>
+                <button onClick={() => startCheckout('store')} className="rounded-full bg-amber-500 px-5 py-2.5 text-sm font-medium text-black hover:bg-amber-400 transition">Desbloquear loja — Pro R$9,90/mês</button>
               </div>
             ) : (
               <div>
@@ -522,7 +543,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* MESSAGES */}
           {(errorMessage || successMessage) && (
             <div className="px-5 sm:px-6 py-3 space-y-2">
               {errorMessage && <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-400">{errorMessage}</div>}
@@ -531,7 +551,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── RIGHT SIDEBAR — PREVIEW ── */}
+        {/* RIGHT SIDEBAR */}
         <aside className="hidden xl:block p-6 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -542,14 +562,12 @@ export default function DashboardPage() {
               {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
             </button>
           </div>
-
           <div className="flex items-center gap-2 mb-4 rounded-xl border border-[#27272a] bg-[#111113] px-3 py-2.5">
             <span className="flex-1 truncate text-xs text-[#52525b]">{username ? `linkify.app.br/${username}` : 'linkify.app.br/seunome'}</span>
             <button onClick={copyShareLink} disabled={!username} className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${isCopied ? 'bg-[#7c3aed] text-white' : username ? 'bg-[#7c3aed] text-white hover:bg-[#6d28d9]' : 'bg-[#27272a] text-[#3f3f46] cursor-not-allowed'}`}>
               {isCopied ? '✓ Copiado' : 'Copiar'}
             </button>
           </div>
-
           <div className={`rounded-2xl border p-5 ${theme === 'dark' ? 'border-[#1c1c1e] bg-[#050505]' : 'border-gray-200 bg-white'}`}>
             {coverUrl ? (
               <div className="mb-5 h-24 overflow-hidden rounded-xl"><img src={coverUrl} alt="Capa" className="h-full w-full object-cover" /></div>
@@ -566,12 +584,9 @@ export default function DashboardPage() {
                 <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-[#52525b]' : 'text-gray-400'}`}>{bio || 'Sua bio aqui'}</p>
               </div>
             </div>
-
             <div className="space-y-2">
               {previewLinks.length === 0 ? (
-                <div className={`rounded-xl border border-dashed p-4 text-center text-xs ${theme === 'dark' ? 'border-[#27272a] text-[#3f3f46]' : 'border-gray-200 text-gray-400'}`}>
-                  Seus links aparecerão aqui
-                </div>
+                <div className={`rounded-xl border border-dashed p-4 text-center text-xs ${theme === 'dark' ? 'border-[#27272a] text-[#3f3f46]' : 'border-gray-200 text-gray-400'}`}>Seus links aparecerão aqui</div>
               ) : (
                 previewLinks.map((link) => (
                   <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className={`block rounded-xl border px-4 py-3 text-sm font-medium transition ${theme === 'dark' ? 'border-[#1c1c1e] bg-[#111113] text-[#fafafa] hover:border-[#7c3aed]/30' : 'border-gray-200 bg-gray-50 text-gray-900 hover:border-[#7c3aed]/40'}`}>
@@ -585,7 +600,6 @@ export default function DashboardPage() {
         </aside>
       </div>
 
-      {/* ── FOOTER ── */}
       <footer className="border-t border-[#1c1c1e] px-4 sm:px-6 py-6 text-xs text-[#3f3f46]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>© 2026 Linkify — feito para criadores brasileiros</div>
@@ -596,7 +610,6 @@ export default function DashboardPage() {
         </div>
       </footer>
 
-      {/* ── MOBILE MENU ── */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div className="w-72 bg-[#111113] border-r border-[#1c1c1e] p-6 flex flex-col">
@@ -628,7 +641,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── UPGRADE MODAL ── */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-md rounded-2xl bg-[#111113] border border-[#27272a] p-6">
@@ -643,7 +655,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
     </main>
   )
 }
