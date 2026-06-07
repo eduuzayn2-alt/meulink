@@ -1302,7 +1302,16 @@ export default function DashboardPage() {
           </div>
         </aside>
       </div>
-          {showUpgradeModal && (
+      <footer className="border-t border-zinc-800 bg-[#090909] px-4 py-8 text-sm text-zinc-400 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>© 2026 Linkify — feito para criadores brasileiros</div>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/termos" className="hover:text-white">Termos de Uso</Link>
+            <Link href="/privacidade" className="hover:text-white">Política de Privacidade</Link>
+          </div>
+        </div>
+      </footer>
+      {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 max-w-lg rounded-2xl bg-[#0b0b0b] border border-zinc-800 p-6">
             <h3 className="text-lg font-bold">Amplie seu alcance com Linkify Pro</h3>

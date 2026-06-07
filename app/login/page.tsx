@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
@@ -21,6 +22,8 @@ export default function LoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false)
   const [signupTerms, setSignupTerms] = useState(false)
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null)
   
   // Common state
   const [loading, setLoading] = useState(false)
@@ -29,7 +32,13 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setErrorMessage(null)
-    
+
+    const now = Date.now()
+    if (lockoutUntil && now < lockoutUntil) {
+      setErrorMessage('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.')
+      return
+    }
+
     if (!loginEmail || !loginPassword) {
       setErrorMessage('Preencha e-mail e senha')
       return
@@ -43,10 +52,21 @@ export default function LoginPage() {
     setLoading(false)
 
     if (error) {
-      setErrorMessage(error.message)
+      const nextAttempts = loginAttempts + 1
+      setLoginAttempts(nextAttempts)
+
+      if (nextAttempts >= 5) {
+        const nextLockout = Date.now() + 3 * 60 * 1000
+        setLockoutUntil(nextLockout)
+        setErrorMessage('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.')
+      } else {
+        setErrorMessage(error.message)
+      }
       return
     }
 
+    setLoginAttempts(0)
+    setLockoutUntil(null)
     router.push('/dashboard')
   }
 
@@ -70,7 +90,7 @@ export default function LoginPage() {
     }
 
     if (!signupTerms) {
-      setErrorMessage('Você deve concordar com os Termos de uso e Política de privacidade')
+      setErrorMessage('Você precisa aceitar os termos para criar uma conta')
       return
     }
 
@@ -345,14 +365,14 @@ export default function LoginPage() {
                 className="mt-1 h-4 w-4 rounded border-zinc-700 bg-[#0d0d0d] text-emerald-500 focus:ring-emerald-500"
               />
               <label htmlFor="terms" className="text-sm leading-6 text-zinc-400">
-                Concordo com os{' '}
-                <button onClick={() => {}} className="underline hover:text-white">
-                  Termos de uso
-                </button>{' '}
+                Li e concordo com os{' '}
+                <Link href="/termos" target="_blank" rel="noreferrer" className="underline hover:text-white">
+                  Termos de Uso
+                </Link>{' '}
                 e{' '}
-                <button onClick={() => {}} className="underline hover:text-white">
-                  Política de privacidade
-                </button>
+                <Link href="/privacidade" target="_blank" rel="noreferrer" className="underline hover:text-white">
+                  Política de Privacidade
+                </Link>
               </label>
             </div>
 
@@ -361,7 +381,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full rounded-[1.5rem] bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
             >
-              {loading ? 'Criando conta...' : 'Criar conta grátis'}
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </button>
 
             <div className="mt-6 text-center text-sm text-zinc-500">

@@ -252,8 +252,8 @@ export default function LandingPage() {
             </div>
             <div>
               <div className="font-bold mb-4 text-sm">Legal</div>
-              <a href="#" className="block text-sm mb-2 hover:text-gray-400" style={{ color: '#888888' }}>Termos de uso</a>
-              <a href="#" className="block text-sm hover:text-gray-400" style={{ color: '#888888' }}>Privacidade</a>
+              <Link href="/termos" className="block text-sm mb-2 hover:text-gray-400" style={{ color: '#888888' }}>Termos de Uso</Link>
+              <Link href="/privacidade" className="block text-sm hover:text-gray-400" style={{ color: '#888888' }}>Política de Privacidade</Link>
             </div>
             <div>
               <div className="font-bold mb-4 text-sm">Contato</div>
